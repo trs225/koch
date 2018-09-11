@@ -65,7 +65,7 @@ def _format(*args):
 
 
 class Writer(FileManager):
-  
+
   def __init__(self, path):
     super(Writer, self).__init__(path, "w")
 
@@ -79,7 +79,8 @@ def main(argv):
   with Reader(FLAGS.input, FLAGS.column) as r:
     with Writer(FLAGS.output) as w:
       for url in r:
-        w.write(url, fetch(url))
+        html = fetch(url) or ''
+        w.write(url, html.encode('string-escape'))
 
 
 if __name__ == "__main__":
