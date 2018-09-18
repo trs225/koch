@@ -10,10 +10,10 @@ message Document {
 
   map<string, string> metadata = 3;
 
-  repeated Token tokens = 4;
+  repeated Blob blobs = 4;
 }
 
-message Token {
+message Blob {
 
   string token = 1;
 
