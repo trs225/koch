@@ -1,2 +1,2 @@
-brew install leveldb
 brew install bazel
+brew install leveldb

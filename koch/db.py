@@ -61,7 +61,7 @@ class Writer(Manager):
 
   defaults = {
     'create_if_missing': True,
-    'error_if_exists': False,
+    'error_if_exists': True,
   }
 
   batch_size = 100
@@ -100,4 +100,5 @@ class Writer(Manager):
     self.n += 1
     self.batch.put(key, value)
     if self.n > self.batch_size:
+      logging.info("Writing %d keys.", self.n)
       self._write_batch()
