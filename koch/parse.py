@@ -1,6 +1,8 @@
 """Fetches raw html content from urls.
 
-TODO: chain module outputs
+TODO:
+ - chain module outputs
+ - verify against heuristic ? 
 """
 from __future__ import absolute_import
 
