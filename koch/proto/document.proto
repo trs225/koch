@@ -15,7 +15,7 @@ message Document {
 
 message Blob {
 
-  string token = 1;
+  string content = 1;
 
   repeated int32 positions = 2;  
 
