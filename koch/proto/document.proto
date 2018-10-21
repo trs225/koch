@@ -21,3 +21,27 @@ message Blob {
 
   // TODO: proper sections?
 }
+
+message HtmlElement {
+
+  string tag = 1;
+
+  string text = 2;
+
+  string tail = 3;
+
+  map<string, string> attrib = 4;
+
+  repeated HtmlElement children = 5;
+
+  map<string, float> weight = 6;
+
+  float score = 7;
+}
+
+message HtmlElements {
+
+  repeated HtmlElement elements = 1;
+
+  float score = 2;
+}

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import collections
 import html5lib
+import re2
 
 from absl import app
 from absl import flags
@@ -21,105 +22,117 @@ flags.DEFINE_string("input", None, "Input raw html db to process.")
 flags.DEFINE_string("output", None, "Output path to write parsed html to.")
 
 
-# TODO: protos
-
-Node = collections.namedtuple("Node", [
-    "tag",
-    "text",
-    "tail",
-    "attrib",
-    "children",
-    "score",
-])
-
-Nodes = collections.namedtuple("Nodes", [
-    "nodes",
-    "score",
-])
-
-
 def is_valid(html):
   if callable(html.tag):
     return False
   elif html.tag in ("script", "style"):
     return False
+  elif re2.findall('crumbs|links|sidebar|social', html.attrib.get('class', '')):
+    return False
   else:
     return True
 
 
-def text_len(unicode):
-  if not unicode or unicode.encode("utf-8").decode("string_escape").isspace():
+def get_text(unicode):
+  if unicode:
+    return re2.sub('\s+', ' ', unicode.encode("utf-8").decode("string_escape"))
+  else:
+    return ''
+
+
+def build_html_element(html, proto=None):
+  if not proto:
+    proto = document_pb2.HtmlElement()
+  proto.tag = html.tag
+  proto.text = get_text(html.text)
+  proto.tail = get_text(html.tail)
+  for key, val in html.attrib.iteritems():
+    if key != 'style':
+      proto.attrib[key] = val
+  return proto
+
+
+def text_len(string):
+  if string.isspace():
     return 0
   else:
-    return len(unicode)
+    return len(string)
+
+ 
+def measure_pos(node):
+  return text_len(node.text) + text_len(node.tail)
+
+def measure_neg(node):
+  return 2 * len(node.tag) + len(str(node.attrib or ""))
 
 
-# TODO:
-#  - try normalizing +/
-#  - look into extra factor of 2
-#  - consider dropping style attr
+_positive = 'pos'
+_negative = 'neg'
 
-def measure(html):
-  if not is_valid(html):
-    return 0  # TODO: return None instead
-  pos = text_len(html.text) + text_len(html.tail)
-  neg = 2 * len(html.tag) + len(str(html.attrib or ""))
-  return 2 * pos - neg
-
-
-# TODO: write intermediate result
-
-def parse(html):
-  children = []
-  score = measure(html)
+def parse(html, proto=None):
+  proto = build_html_element(html, proto)
+  proto.weight[_positive] = measure_pos(proto)
+  proto.weight[_negative] = measure_neg(proto)
   for child in html:
     if is_valid(child):
-      parsed_child = parse(child)
-      children.append(parsed_child)
-      score += parsed_child.score
-  return Node(
-    tag=html.tag,
-    text=html.text,
-    tail=html.tail,
-    attrib=html.attrib,
-    children=children,
-    score=score)
+      parsed_child = parse(child, proto.children.add())
+      proto.weight[_positive] += parsed_child.weight[_positive]
+      proto.weight[_negative] += parsed_child.weight[_negative]
+  return proto
+
+
+def score_normalized(node, pos, neg):
+  positive = node.weight[_positive] / pos
+  negative = node.weight[_negative] / neg
+  node.score = positive - negative
+  for child in node.children:
+    score_normalized(child, pos, neg)
+  return node
+
+
+def score(node):
+  # total_positive = node.weight[_positive]
+  # total_negative = node.weight[_negative]
+  return score_normalized(node, 1, 1)
 
 
 # TODO: simplify
 
-def find_best(node):
-  best = Nodes([node], node.score)
-  best_arr = Nodes([], None)
-  best_arr_i = Nodes([], 0)
+def find_best(node): #, pos, neg):
+  best = document_pb2.HtmlElements(
+    elements=[node], score=node.score)
+  best_arr_i = document_pb2.HtmlElements()
+  best_arr = None
   for child in node.children:
     child_best = find_best(child)
-    if child_best.score > best.score:
+    if best.score < child_best.score:
       best = child_best
-    if child.score > child.score + best_arr_i.score:
-      best_arr_i = Nodes([child], child.score)
-    else:
-      best_arr_i = Nodes(
-        best_arr_i.nodes + [child],
-        best_arr_i.score + child.score)
-    if best_arr_i.score > best_arr.score:
-      best_arr = best_arr_i
-  if best_arr.score > best.score:
-    best = best_arr
+#     if child.score + best_arr_i.score < child.score:
+#       del best_arr_i.elements[:]
+#       best_arr_i.elements.extend([child])
+#       best_arr_i.score = child.score
+#     else:
+#       best_arr_i.elements.extend([child])
+#       best_arr_i.score += child.score
+#     if not best_arr or best_arr.score < best_arr_i.score:
+#       best_arr = best_arr_i
+#   if best_arr and best.score < best_arr.score:
+#     best = best_arr
   return best
 
 
 def print_node(node):
-    if node.text:
-      print node.text.encode('utf-8').decode('string_escape')
-    for child in node.children:
-      print_node(child)
-    if node.tail:
-      print node.tail.encode('utf-8').decode('string_escape')
+  print node.score
+  if node.text:
+    print node.text.encode('utf-8').decode('string_escape')
+  for child in node.children:
+    print_node(child)
+  if node.tail:
+    print node.tail.encode('utf-8').decode('string_escape')
   
 
 def print_nodes(nodes):
-  for node in nodes.nodes:
+  for node in nodes.elements:
     print_node(node)
 
 
@@ -129,9 +142,9 @@ def main(argv):
   with db.Reader(FLAGS.input) as r:
     for url, raw in r:
       tree = html5lib.parse(raw, treebuilder="etree", namespaceHTMLElements=False)
-      node = parse(tree)
+      node = score(parse(tree))
       best = find_best(node)
-
+       
       print url
       print
       print_nodes(best)
