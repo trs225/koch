@@ -6,7 +6,6 @@ TODO:
 """
 from __future__ import absolute_import
 
-import collections
 import html5lib
 import re2
 
@@ -27,7 +26,7 @@ def is_valid(html):
     return False
   elif html.tag in ("script", "style"):
     return False
-  elif re2.findall('crumbs|links|sidebar|social', html.attrib.get('class', '')):
+  elif re2.findall("crumbs|links|sidebar|social", html.attrib.get("class", "")):
     return False
   else:
     return True
@@ -35,9 +34,9 @@ def is_valid(html):
 
 def get_text(unicode):
   if unicode:
-    return re2.sub('\s+', ' ', unicode.encode("utf-8").decode("string_escape"))
+    return re2.sub(r"\s+", " ", unicode.encode("utf-8").decode("string_escape"))
   else:
-    return ''
+    return ""
 
 
 def build_html_element(html, proto=None):
@@ -47,7 +46,7 @@ def build_html_element(html, proto=None):
   proto.text = get_text(html.text)
   proto.tail = get_text(html.tail)
   for key, val in html.attrib.iteritems():
-    if key != 'style':
+    if key != "style":
       proto.attrib[key] = val
   return proto
 
@@ -62,12 +61,14 @@ def text_len(string):
 def measure_pos(node):
   return text_len(node.text) + text_len(node.tail)
 
+
 def measure_neg(node):
   return 2 * len(node.tag) + len(str(node.attrib or ""))
 
 
 _positive = 'pos'
 _negative = 'neg'
+
 
 def parse(html, proto=None):
   proto = build_html_element(html, proto)
@@ -81,24 +82,16 @@ def parse(html, proto=None):
   return proto
 
 
-def score_normalized(node, pos, neg):
-  positive = node.weight[_positive] / pos
-  negative = node.weight[_negative] / neg
+def score(node):
+  positive = node.weight[_positive]
+  negative = node.weight[_negative]
   node.score = positive - negative
   for child in node.children:
-    score_normalized(child, pos, neg)
+    score(child)
   return node
 
 
-def score(node):
-  # total_positive = node.weight[_positive]
-  # total_negative = node.weight[_negative]
-  return score_normalized(node, 1, 1)
-
-
-# TODO: simplify
-
-def find_best(node): #, pos, neg):
+def find_best(node):
   best = document_pb2.HtmlElements(
     elements=[node], score=node.score)
   best_arr_i = document_pb2.HtmlElements()
@@ -107,17 +100,6 @@ def find_best(node): #, pos, neg):
     child_best = find_best(child)
     if best.score < child_best.score:
       best = child_best
-#     if child.score + best_arr_i.score < child.score:
-#       del best_arr_i.elements[:]
-#       best_arr_i.elements.extend([child])
-#       best_arr_i.score = child.score
-#     else:
-#       best_arr_i.elements.extend([child])
-#       best_arr_i.score += child.score
-#     if not best_arr or best_arr.score < best_arr_i.score:
-#       best_arr = best_arr_i
-#   if best_arr and best.score < best_arr.score:
-#     best = best_arr
   return best
 
 

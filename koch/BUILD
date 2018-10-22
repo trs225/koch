@@ -20,3 +20,11 @@ py_binary(
       "//koch/proto:document_py_proto",
     ],
 )
+
+py_binary(
+    name = "sample",
+    srcs = ["sample.py"],
+    deps = [
+      ":db",
+    ],
+)
