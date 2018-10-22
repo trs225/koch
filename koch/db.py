@@ -1,4 +1,7 @@
-"""Defines classes handling system i/o."""
+"""Defines classes handling system i/o.
+
+TODO: fake reader from string args
+"""
 from __future__ import absolute_import
 
 import csv
@@ -62,43 +65,12 @@ class Writer(Manager):
   defaults = {
     'create_if_missing': True,
     'error_if_exists': True,
+    'write_buffer_size': 2 * 1024 * 1024,
   }
-
-  batch_size = 100
 
   def __init__(self, path, transaction=True, **kwargs):
     super(Writer, self).__init__(plyvel.DB, path, **kwargs)
-    self.transaction = transaction
-    self.batch = None
-    self.n = None
-
-  def __enter__(self):
-    super(Writer, self).__enter__()
-    self._start_batch()
-    return self
-
-  def __exit__(self, *args):
-    self._end_batch(*args)
-    super(Writer, self).__exit__(*args)
-
-  def _start_batch(self):
-    self.batch = self.db.write_batch(transaction=self.transaction)
-    self.batch.__enter__()
-    self.n = 0
-
-  def _end_batch(self, *args):
-    self.batch.__exit__(*args)
-    self.batch = None
-    self.n = None
-
-  def _write_batch(self):
-    self._end_batch(None, None, None)
-    self._start_batch()
 
   def write(self, key, value):
     self.check()
-    self.n += 1
-    self.batch.put(key, value)
-    if self.n > self.batch_size:
-      logging.info("Writing %d keys.", self.n)
-      self._write_batch()
+    self.db.put(key, value)

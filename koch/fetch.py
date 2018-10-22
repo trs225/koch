@@ -1,4 +1,9 @@
-"""Fetches raw html content from urls."""
+"""Fetches raw html content from urls.
+
+TODO:
+ - try getting id_ archive url
+ - side output for failed urls
+"""
 from __future__ import absolute_import
 
 import contextlib
@@ -23,6 +28,7 @@ _HEADERS = {
   "User-Agent": "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11"
 }
 
+
 def fetch(url):
   try:
     r = urllib2.Request(url, headers=_HEADERS)
@@ -37,8 +43,8 @@ def main(argv):
   with db.CsvReader(FLAGS.input, FLAGS.column) as r:
     with db.Writer(FLAGS.output) as w:
       for url in r:
-        html = fetch(url) or ''
-        w.write(url, html.encode('string-escape'))
+        html = fetch(url) or ""
+        w.write(url, html.decode("string-escape"))
 
 
 if __name__ == "__main__":

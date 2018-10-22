@@ -1,8 +1,9 @@
 """Fetches raw html content from urls.
 
 TODO:
+ - threshold for examination
  - chain module outputs
- - verify against heuristic ? 
+ - verify against heuristic
 """
 from __future__ import absolute_import
 
@@ -11,7 +12,6 @@ import re2
 
 from absl import app
 from absl import flags
-from absl import logging
 
 from koch import db
 from koch.proto import document_pb2
@@ -24,17 +24,22 @@ flags.DEFINE_string("output", None, "Output path to write parsed html to.")
 def is_valid(html):
   if callable(html.tag):
     return False
-  elif html.tag in ("script", "style"):
+  elif html.tag in ("noscript", "script", "style"):
     return False
-  elif re2.findall("crumbs|links|sidebar|social", html.attrib.get("class", "")):
+  elif re2.findall(
+      "crumbs|links|sidebar|share|social",
+      html.attrib.get("class", "") + html.attrib.get("id", "")):
     return False
+  # elif re2.findall(
+  #     "comments|disqus", html.attrib.get("id", "")):
+  #   return False
   else:
     return True
 
 
-def get_text(unicode):
-  if unicode:
-    return re2.sub(r"\s+", " ", unicode.encode("utf-8").decode("string_escape"))
+def get_text(string):
+  if string:
+    return re2.sub(r"\s+", " ", string)
   else:
     return ""
 
@@ -82,13 +87,19 @@ def parse(html, proto=None):
   return proto
 
 
-def score(node):
-  positive = node.weight[_positive]
-  negative = node.weight[_negative]
-  node.score = positive - negative
+def score_normalized(node, pos, neg):
+  node_pos = node.weight[_positive] / pos
+  node_neg = node.weight[_negative] / neg
+  node.score = node_pos - node_neg
   for child in node.children:
-    score(child)
+    score_normalized(child, pos, neg)
   return node
+
+
+def score(node):
+  pos = node.weight[_positive] or 1
+  neg = node.weight[_negative] or 1
+  return score_normalized(node, pos, neg)
 
 
 def find_best(node):
@@ -104,7 +115,6 @@ def find_best(node):
 
 
 def print_node(node):
-  print node.score
   if node.text:
     print node.text.encode('utf-8').decode('string_escape')
   for child in node.children:
@@ -128,9 +138,8 @@ def main(argv):
       best = find_best(node)
        
       print url
-      print
+      print "-" * len(url)
       print_nodes(best)
-      print
       print
 
 

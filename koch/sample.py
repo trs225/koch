@@ -5,7 +5,6 @@ import random
 
 from absl import app
 from absl import flags
-from absl import logging
 
 from koch import db
 
@@ -16,8 +15,8 @@ flags.DEFINE_string("output", None, "Output path to write parsed html to.")
 flags.DEFINE_integer("number", 100, "Number of items to sample at random.")
 
 
-def sample(item, n, out):
-  if random.random() < 1 / float(n):
+def sample(item, k, out):
+  if random.random() < len(out) / float(k):
     i = random.randint(0, len(out) - 1)
     out[i] = item
 
@@ -31,9 +30,6 @@ def main(argv):
       if i < n:
         out.append((k, v))
       else:
-        break
-    for i, (k, v) in enumerate(r):
-      if i > n:
         sample((k, v), i, out)
 
   with db.Writer(FLAGS.output) as w:
