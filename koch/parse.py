@@ -14,6 +14,7 @@ from absl import app
 from absl import flags
 
 from koch import db
+from koch import pipeline
 from koch.proto import document_pb2
 
 FLAGS = flags.FLAGS
@@ -128,22 +129,27 @@ def print_nodes(nodes):
     print_node(node)
 
 
+class ParsingPipeline(pipeline.Pipeline):
+  
+  def pipe(self, key, value):
+    tree = html5lib.parse(value, treebuilder="etree", namespaceHTMLElements=False)
+    node = score(parse(tree))
+    best = find_best(node)
+       
+    print key
+    print "-" * len(key)
+    print best.score
+    print
+    print_nodes(best)
+    print
+
+
 # TODO: write output
 
 def main(argv):
-  with db.Reader(FLAGS.input) as r:
-    for url, raw in r:
-      tree = html5lib.parse(raw, treebuilder="etree", namespaceHTMLElements=False)
-      node = score(parse(tree))
-      best = find_best(node)
-       
-      print url
-      print "-" * len(url)
-      print best.score
-      print
-      print_nodes(best)
-      print
-
+  pipeline = ParsingPipeline(db.Reader(FLAGS.input))
+  pipeline.run()
+ 
 
 if __name__ == "__main__":
   flags.mark_flag_as_required("input")

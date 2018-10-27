@@ -17,7 +17,16 @@ py_binary(
     srcs = ["parse.py"],
     deps = [
       ":db",
+      ":pipeline",
       "//koch/proto:document_py_proto",
+    ],
+)
+
+py_binary(
+    name = "pipeline",
+    srcs = ["pipeline.py"],
+    deps = [
+      ":db",
     ],
 )
 

@@ -61,6 +61,21 @@ class Writer(Manager):
     self.db.put(key, value)
 
 
+class FakeWriter(Writer):
+  
+  def __init__(self):
+    pass
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *args):
+    pass
+  
+  def write(self, key, value):
+    pass
+
+
 class CsvManager(Manager):
   
   def __init__(self, reader_ctor, path, mode, **kwargs):
