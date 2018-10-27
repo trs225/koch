@@ -139,6 +139,8 @@ def main(argv):
        
       print url
       print "-" * len(url)
+      print best.score
+      print
       print_nodes(best)
       print
 

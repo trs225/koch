@@ -40,11 +40,16 @@ def fetch(url):
 
 
 def main(argv):
-  with db.CsvReader(FLAGS.input, FLAGS.column) as r:
+  with db.CsvReader(FLAGS.input, key=FLAGS.column) as r:
     with db.Writer(FLAGS.output) as w:
+      i = 0
       for url in r:
+        if i > 10:
+          break
+        i += 1
         html = fetch(url) or ""
         w.write(url, html.decode("string-escape"))
+
 
 
 if __name__ == "__main__":
