@@ -4,6 +4,15 @@ py_library(
    srcs = ["db.py"],
 )
 
+
+py_binary(
+    name = "pipeline",
+    srcs = ["pipeline.py"],
+    deps = [
+      ":db",
+    ],
+)
+
 py_binary(
     name = "fetch",
     srcs = ["fetch.py"],
@@ -23,17 +32,10 @@ py_binary(
 )
 
 py_binary(
-    name = "pipeline",
-    srcs = ["pipeline.py"],
-    deps = [
-      ":db",
-    ],
-)
-
-py_binary(
     name = "sample",
     srcs = ["sample.py"],
     deps = [
       ":db",
+      ":pipeline",
     ],
 )

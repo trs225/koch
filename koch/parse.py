@@ -147,8 +147,7 @@ class ParsingPipeline(pipeline.Pipeline):
 # TODO: write output
 
 def main(argv):
-  pipeline = ParsingPipeline(db.Reader(FLAGS.input))
-  pipeline.run()
+  ParsingPipeline(db.Reader(FLAGS.input)).run()
  
 
 if __name__ == "__main__":
