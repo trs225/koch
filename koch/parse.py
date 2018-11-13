@@ -1,10 +1,3 @@
-"""Fetches raw html content from urls.
-
-TODO:
- - threshold for examination
- - chain module outputs
- - verify against heuristic
-"""
 from __future__ import absolute_import
 
 import html5lib
@@ -18,10 +11,11 @@ from koch import pipeline
 from koch.proto import document_pb2
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("input", None, "Input raw html db to process.")
-flags.DEFINE_string("output", None, "Output path to write parsed html to.")
+flags.DEFINE_string("parse_input", None, "Input raw html db to process.")
+flags.DEFINE_string("parse_output", None, "Output path to write parsed html to.")
 
 
+# TODO: retain comment tail text
 def is_valid(html):
   if callable(html.tag):
     return False
@@ -147,10 +141,10 @@ class ParsingPipeline(pipeline.Pipeline):
 # TODO: write output
 
 def main(argv):
-  ParsingPipeline(db.Reader(FLAGS.input)).run()
+  ParsingPipeline(db.Reader(FLAGS.parse_input)).run()
  
 
 if __name__ == "__main__":
-  flags.mark_flag_as_required("input")
-  flags.mark_flag_as_required("output")
+  flags.mark_flag_as_required("parse_input")
+  flags.mark_flag_as_required("parse_output")
   app.run(main)

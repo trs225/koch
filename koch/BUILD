@@ -14,10 +14,21 @@ py_binary(
 )
 
 py_binary(
+    name = "sample",
+    srcs = ["sample.py"],
+    deps = [
+      ":db",
+      ":pipeline",
+    ],
+)
+
+py_binary(
     name = "fetch",
     srcs = ["fetch.py"],
     deps = [
       ":db",
+      ":pipeline",
+      ":sample",
     ],
 )
 
@@ -28,14 +39,5 @@ py_binary(
       ":db",
       ":pipeline",
       "//koch/proto:document_py_proto",
-    ],
-)
-
-py_binary(
-    name = "sample",
-    srcs = ["sample.py"],
-    deps = [
-      ":db",
-      ":pipeline",
     ],
 )

@@ -10,14 +10,14 @@ from koch import db
 from koch import pipeline
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("input", None, "Input raw html db to process.")
-flags.DEFINE_string("output", None, "Output path to write parsed html to.")
+flags.DEFINE_string("sample_input", None, "Input raw html db to process.")
+flags.DEFINE_string("sample_output", None, "Output path to write parsed html to.")
 
-flags.DEFINE_boolean("output_csv", False, "Whether to output to csv instead.")
-flags.DEFINE_string("output_key", "url", "Name of the output csv key column.")
-flags.DEFINE_string("output_val", "sample", "Name of the output csv val column.")
+flags.DEFINE_boolean("sample_output_csv", False, "Whether to output to csv instead.")
+flags.DEFINE_string("sample_output_key", "url", "Name of the output csv key column.")
+flags.DEFINE_string("sample_output_val", "sample", "Name of the output csv val column.")
 
-flags.DEFINE_integer("number", 100, "Number of items to sample at random.")
+flags.DEFINE_integer("sample_number", None, "Number of items to sample at random.")
 
 
 def sample(item, k, out):  
@@ -48,8 +48,8 @@ class SamplingPipeline(pipeline.Pipeline):
 def main(argv):
   random.seed(0)
 
-  if FLAGS.output_csv:
-    writer = db.CsvWriter(FLAGS.output, FLAGS.output_key, FLAGS.output_val)
+  if FLAGS.sample_output_csv:
+    writer = db.CsvWriter(FLAGS.sample_output, FLAGS.sample_output_key, FLAGS.sample_output_val)
   else:
     writer = db.Writer(FLAGS.output)
 
@@ -57,6 +57,6 @@ def main(argv):
 
 
 if __name__ == "__main__":
-  flags.mark_flag_as_required("input")
-  flags.mark_flag_as_required("output")
+  flags.mark_flag_as_required("sample_input")
+  flags.mark_flag_as_required("sample_output")
   app.run(main)

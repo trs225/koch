@@ -39,10 +39,10 @@ class Reader(Manager):
     super(Reader, self).__init__(plyvel.DB, path, **kwargs)
 
   def __iter__(self):
-    self.check()
-    with self.db.iterator() as it:
-      for key, value in it:
-        yield key, value
+    with self:
+      with self.db.iterator() as it:
+        for key, value in it:
+          yield key, value
 
 
 class Writer(Manager):
@@ -61,79 +61,55 @@ class Writer(Manager):
     self.db.put(key, value)
 
 
-class FakeWriter(Writer):
-  
-  def __init__(self):
-    pass
-
-  def __enter__(self):
-    return self
-
-  def __exit__(self, *args):
-    pass
-  
-  def write(self, key, value):
-    pass
-
-
 class CsvManager(Manager):
   
-  def __init__(self, reader_ctor, path, mode, **kwargs):
+  def __init__(self, csv_ctor, path, mode, **kwargs):
     super(CsvManager, self).__init__(open, path, mode)
-    self.reader_ctor = reader_ctor
+    self.csv_ctor = csv_ctor
     self.mode = mode
     self.kwargs = kwargs
     self.reader = None
 
   def __enter__(self):
     super(CsvManager, self).__enter__()
-    self.reader = self.reader_ctor(self.db, **self.kwargs)
+    self.csv = self.csv_ctor(self.db, **self.kwargs)
     return self
 
   def __exit__(self, *args):
     super(CsvManager, self).__exit__(*args)
-    self.reader = None
+    self.csv = None
 
 
 class CsvReader(CsvManager):
 
-  def __init__(self, path, key=None, val=None, **kwargs):
+  def __init__(self, path, key, val=None, **kwargs):
     super(CsvReader, self).__init__(csv.DictReader, path, "r")
     self.key = key
     self.val = val
 
   def __iter__(self):
-    self.check()
-    if self.key and self.val:
-      key, val = self.key, self.val
-      for row in self.reader:
-        yield row[key], row[val]
-    elif self.key or self.val:
-      key = self.key or self.val
-      for row in self.reader:
-        yield row[key]
-    else:
-      for row in self.reader:
-        yield row
-
-  def check(self):
-    super(CsvReader, self).check()
-    if self.key and self.key not in self.reader.fieldnames:
-      raise ValueError("Expected column %s in %s", self.key, self.path)
-    if self.val and self.val not in self.reader.fieldnames:
-      raise ValueError("Expected column %s in %s", self.val, self.path)
+    with self:
+      if self.key and self.val:
+        key, val = self.key, self.val
+        for row in self.reader:
+          yield row[key], row[val]
+      elif self.key:
+        for row in self.reader:
+          yield row[self.key], None
+      else:
+        raise ValueError("Expected csv column key.")
     
 
 class CsvWriter(CsvManager):
 
   def __init__(self, path, key, val, **kwargs):
-    super(CsvReader, self).__init__(csv.DictReader, path, "w")
+    super(CsvWriter, self).__init__(csv.DictWriter, path, "w")
     self.key = key
     self.val = val
 
   def check(self):
     super(CsvReader, self).check()
-    if not self.key and self.val:
+    if not self.key or not self.val:
       raise ValueError("Missing key, value fieldnames to write.")
 
   def write(self, key, value):
