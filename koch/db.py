@@ -39,7 +39,22 @@ class Reader(Manager):
     with self:
       with self.db.iterator() as it:
         for key, value in it:
-          yield key, value
+          yield key, self.map(value)
+
+  def map(self, value):
+    return value
+
+
+class ProtoReader(Reader):
+  
+  def __init__(self, proto, path, **kwargs):
+    super(ProtoReader, self).__init__(path, **kwargs)
+    self.proto = proto
+  
+  def map(self, value):
+    out = self.proto()
+    out.ParseFromString(value)
+    return out
 
 
 class DebugReader(object):
@@ -66,7 +81,20 @@ class Writer(Manager):
 
   def write(self, key, value):
     self.check()
-    self.db.put(key, value)
+    self.db.put(key, self.map(value))
+
+  def map(self, value):
+    return value
+
+
+class ProtoWriter(Writer):
+
+  def __init__(self, proto, path, **kwargs):
+    super(ProtoWriter, self).__init__(path, **kwargs)
+    self.proto = proto
+
+  def map(self, value):
+    return value.SerializeToString()
 
 
 class DebugWriter(object):
@@ -75,7 +103,7 @@ class DebugWriter(object):
     return self
 
   def __exit__(self, *args):
-    pass
+    return
 
   def write(self, key, value):
     if key and value:
@@ -90,12 +118,12 @@ class CsvManager(Manager):
     super(CsvManager, self).__init__(open, path, mode)
     self.csv_ctor = csv_ctor
     self.mode = mode
-    self.kwargs = kwargs
-    self.reader = None
+    self.csv_kwargs = kwargs
+    self.csv = None
 
   def __enter__(self):
     super(CsvManager, self).__enter__()
-    self.csv = self.csv_ctor(self.db, **self.kwargs)
+    self.csv = self.csv_ctor(self.db, **self.csv_kwargs)
     return self
 
   def __exit__(self, *args):
@@ -114,10 +142,10 @@ class CsvReader(CsvManager):
     with self:
       if self.key and self.val:
         key, val = self.key, self.val
-        for row in self.reader:
+        for row in self.csv:
           yield row[key], row[val]
       elif self.key:
-        for row in self.reader:
+        for row in self.csv:
           yield row[self.key], None
       else:
         raise ValueError("Expected csv column key.")
@@ -126,15 +154,16 @@ class CsvReader(CsvManager):
 class CsvWriter(CsvManager):
 
   def __init__(self, path, key, val, **kwargs):
-    super(CsvWriter, self).__init__(csv.DictWriter, path, "w")
+    super(CsvWriter, self).__init__(
+        csv.DictWriter, path, "w", fieldnames=[key, val])
     self.key = key
     self.val = val
 
   def check(self):
-    super(CsvReader, self).check()
+    super(CsvWriter, self).check()
     if not self.key or not self.val:
       raise ValueError("Missing key, value fieldnames to write.")
 
   def write(self, key, value):
     self.check()
-    self.reader.writerow({self.key: key, self.val: value})
+    self.csv.writerow({self.key: key, self.val: value})

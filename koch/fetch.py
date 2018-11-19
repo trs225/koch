@@ -18,15 +18,15 @@ from absl import logging
 from koch import db
 from koch import pipeline
 from koch import sample
+from koch.proto import document_pb2
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("fetch_input", None, "Input path to csv of urls to fetch.")
 flags.DEFINE_string("fetch_output", None, "Output path to write fetched html to.")
+flags.DEFINE_multi_string("fetch_debug", None, "Input urls to debug.")
 
 flags.DEFINE_string(
     "fetch_column", "URL for Content", "Name of url column in csv file.")
-
-flags.DEFINE_multi_string("fetch_debug", None, "Input urls to debug.")
 
 
 _HEADERS = {
@@ -38,8 +38,9 @@ def fetch(url):
   try:
     r = urllib2.Request(url, headers=_HEADERS)
     with contextlib.closing(urllib2.urlopen(r)) as conn:
+      encoding = conn.headers.getparam("charset") or "utf-8"
       logging.info("Fetching %s", url)
-      return conn.read()
+      return conn.read().decode(encoding)
   except Exception as e:
     logging.warning("Failed to open url %s: %s", url, str(e))
 
@@ -48,20 +49,22 @@ class FetchingPipeline(pipeline.Pipeline):
 
   def pipe(self, key, value):
     url = key
-    html = fetch(url) or ""
-    return url, html.decode("utf-8") # .decode("string-escape")
+    html = document_pb2.RawHtml()
+    html.html = fetch(url) or ""
+    return url, html
 
 
 def main(argv):
   reader = db.CsvReader(FLAGS.fetch_input, key=FLAGS.fetch_column)
-  writer = db.Writer(FLAGS.fetch_output)
+  writer = db.ProtoWriter(document_pb2.RawHtml, FLAGS.fetch_output)
+ 
+  if FLAGS.sample_number:
+    random.seed(0)
+    reader = sample.SamplingPipeline(FLAGS.sample_number, reader)
 
   if FLAGS.fetch_debug:
     reader = db.DebugReader(FLAGS.fetch_debug)
     writer = db.DebugWriter()
-  elif FLAGS.sample_number:
-    random.seed(0)
-    reader = sample.SamplingPipeline(FLAGS.sample_number, reader)
 
   FetchingPipeline(reader, writer).run()
 

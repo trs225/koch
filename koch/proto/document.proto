@@ -45,3 +45,7 @@ message HtmlElements {
 
   float score = 2;
 }
+
+message RawHtml {
+  string html = 1;
+}

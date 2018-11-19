@@ -13,11 +13,15 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("sample_input", None, "Input raw html db to process.")
 flags.DEFINE_string("sample_output", None, "Output path to write parsed html to.")
 
+flags.DEFINE_integer("sample_number", None, "Number of items to sample at random.")
+
+flags.DEFINE_boolean("sample_input_csv", False, "Whether to read from csv instead.")
+flags.DEFINE_string("sample_input_key", None, "Name of the input csv key column.")
+flags.DEFINE_string("sample_input_val", None, "Name of the input csv val column.")
+
 flags.DEFINE_boolean("sample_output_csv", False, "Whether to output to csv instead.")
 flags.DEFINE_string("sample_output_key", "url", "Name of the output csv key column.")
 flags.DEFINE_string("sample_output_val", "sample", "Name of the output csv val column.")
-
-flags.DEFINE_integer("sample_number", None, "Number of items to sample at random.")
 
 
 def sample(item, k, out):  
@@ -47,13 +51,18 @@ class SamplingPipeline(pipeline.Pipeline):
 
 def main(argv):
   random.seed(0)
+  reader = db.Reader(FLAGS.sample_input)
+  writer = db.Writer(FLAGS.sample_output)
 
+  if FLAGS.sample_input_csv:
+    reader = db.CsvReader(
+        FLAGS.sample_input, FLAGS.sample_input_key, FLAGS.sample_input_val)
+    
   if FLAGS.sample_output_csv:
-    writer = db.CsvWriter(FLAGS.sample_output, FLAGS.sample_output_key, FLAGS.sample_output_val)
-  else:
-    writer = db.Writer(FLAGS.output)
+    writer = db.CsvWriter(
+        FLAGS.sample_output, FLAGS.sample_output_key, FLAGS.sample_output_val)
 
-  SamplingPipeline(FLAGS.number, db.Reader(FLAGS.input), writer).run()
+  SamplingPipeline(FLAGS.sample_number, reader, writer).run()
 
 
 if __name__ == "__main__":

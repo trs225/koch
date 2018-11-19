@@ -28,7 +28,7 @@ flags.DEFINE_multi_string("parse_debug", None, "Input urls to debug.")
 def is_valid(html):
   if callable(html.tag):
     return False
-  elif html.tag in ("noscript", "script", "style"):
+  elif html.tag in ("iframe", "noscript", "script", "style"):
     return False
   # elif re2.findall(
   #     "crumbs|links|sidebar|share|social",
@@ -135,11 +135,10 @@ def print_nodes(nodes):
 class ParsingPipeline(pipeline.Pipeline):
   
   def pipe(self, key, value):
-    tree = html5lib.parse(value, treebuilder="etree", namespaceHTMLElements=False)
+    tree = html5lib.parse(
+        value.html, treebuilder="etree", namespaceHTMLElements=False)
     node = score(parse(tree))
     best = find_best(node)
-
-    # return key, best
        
     print key
     print "-" * len(key)
@@ -147,10 +146,12 @@ class ParsingPipeline(pipeline.Pipeline):
     print
     print_nodes(best)
     print
- 
+
+    # return key, best
+  
 
 def main(argv):
-  reader = db.Reader(FLAGS.parse_input)
+  reader = db.ProtoReader(document_pb2.RawHtml, FLAGS.parse_input)
   writer = db.DebugWriter()
 
   if FLAGS.parse_debug:

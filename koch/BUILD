@@ -29,6 +29,7 @@ py_binary(
       ":db",
       ":pipeline",
       ":sample",
+      "//koch/proto:document_py_proto",
     ],
 )
 
