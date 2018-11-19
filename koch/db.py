@@ -1,7 +1,4 @@
-"""Defines classes handling system i/o.
-
-TODO: fake reader from string args
-"""
+"""Defines classes handling system i/o."""
 from __future__ import absolute_import
 
 import csv
@@ -45,6 +42,17 @@ class Reader(Manager):
           yield key, value
 
 
+class DebugReader(object):
+
+  def __init__(self, keys, values=None):
+    self.keys = keys
+    self.values = values or [None] * len(keys)
+
+  def __iter__(self):
+    for k, v in zip(self.keys, self.values):
+      yield k, v
+
+
 class Writer(Manager):
 
   defaults = {
@@ -59,6 +67,21 @@ class Writer(Manager):
   def write(self, key, value):
     self.check()
     self.db.put(key, value)
+
+
+class DebugWriter(object):
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *args):
+    pass
+
+  def write(self, key, value):
+    if key and value:
+      print key, value
+    elif key:
+      print key
 
 
 class CsvManager(Manager):

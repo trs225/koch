@@ -37,6 +37,7 @@ py_binary(
     srcs = ["parse.py"],
     deps = [
       ":db",
+      ":fetch",
       ":pipeline",
       "//koch/proto:document_py_proto",
     ],

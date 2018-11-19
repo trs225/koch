@@ -26,6 +26,8 @@ flags.DEFINE_string("fetch_output", None, "Output path to write fetched html to.
 flags.DEFINE_string(
     "fetch_column", "URL for Content", "Name of url column in csv file.")
 
+flags.DEFINE_multi_string("fetch_debug", None, "Input urls to debug.")
+
 
 _HEADERS = {
   "User-Agent": "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11"
@@ -47,17 +49,21 @@ class FetchingPipeline(pipeline.Pipeline):
   def pipe(self, key, value):
     url = key
     html = fetch(url) or ""
-    return url, html.decode("string-escape")
+    return url, html.decode("utf-8") # .decode("string-escape")
 
 
 def main(argv):
   reader = db.CsvReader(FLAGS.fetch_input, key=FLAGS.fetch_column)
+  writer = db.Writer(FLAGS.fetch_output)
 
-  if FLAGS.sample_number:
+  if FLAGS.fetch_debug:
+    reader = db.DebugReader(FLAGS.fetch_debug)
+    writer = db.DebugWriter()
+  elif FLAGS.sample_number:
     random.seed(0)
     reader = sample.SamplingPipeline(FLAGS.sample_number, reader)
 
-  FetchingPipeline(reader, db.Writer(FLAGS.fetch_output)).run()
+  FetchingPipeline(reader, writer).run()
 
 
 if __name__ == "__main__":

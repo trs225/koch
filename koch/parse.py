@@ -1,3 +1,10 @@
+"""Parses raw html, extracting article body.
+
+TODO:
+ - compare body extraction methods
+ - retain all tail text
+ - write output
+"""
 from __future__ import absolute_import
 
 import html5lib
@@ -7,6 +14,7 @@ from absl import app
 from absl import flags
 
 from koch import db
+from koch import fetch
 from koch import pipeline
 from koch.proto import document_pb2
 
@@ -14,17 +22,18 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("parse_input", None, "Input raw html db to process.")
 flags.DEFINE_string("parse_output", None, "Output path to write parsed html to.")
 
+flags.DEFINE_multi_string("parse_debug", None, "Input urls to debug.")
 
-# TODO: retain comment tail text
+
 def is_valid(html):
   if callable(html.tag):
     return False
   elif html.tag in ("noscript", "script", "style"):
     return False
-  elif re2.findall(
-      "crumbs|links|sidebar|share|social",
-      html.attrib.get("class", "") + html.attrib.get("id", "")):
-    return False
+  # elif re2.findall(
+  #     "crumbs|links|sidebar|share|social",
+  #     html.attrib.get("class", "") + html.attrib.get("id", "")):
+  #   return False
   # elif re2.findall(
   #     "comments|disqus", html.attrib.get("id", "")):
   #   return False
@@ -85,12 +94,12 @@ def parse(html, proto=None):
 def score_normalized(node, pos, neg):
   node_pos = node.weight[_positive] / pos
   node_neg = node.weight[_negative] / neg
-  node.score = node_pos - node_neg
+  node.score = node_pos - 2 * node_neg
   for child in node.children:
     score_normalized(child, pos, neg)
   return node
 
-
+ 
 def score(node):
   pos = node.weight[_positive] or 1
   neg = node.weight[_negative] or 1
@@ -111,11 +120,11 @@ def find_best(node):
 
 def print_node(node):
   if node.text:
-    print node.text.encode('utf-8').decode('string_escape')
+    print node.text
   for child in node.children:
     print_node(child)
   if node.tail:
-    print node.tail.encode('utf-8').decode('string_escape')
+    print node.tail
   
 
 def print_nodes(nodes):
@@ -129,6 +138,8 @@ class ParsingPipeline(pipeline.Pipeline):
     tree = html5lib.parse(value, treebuilder="etree", namespaceHTMLElements=False)
     node = score(parse(tree))
     best = find_best(node)
+
+    # return key, best
        
     print key
     print "-" * len(key)
@@ -136,12 +147,17 @@ class ParsingPipeline(pipeline.Pipeline):
     print
     print_nodes(best)
     print
-
-
-# TODO: write output
+ 
 
 def main(argv):
-  ParsingPipeline(db.Reader(FLAGS.parse_input)).run()
+  reader = db.Reader(FLAGS.parse_input)
+  writer = db.DebugWriter()
+
+  if FLAGS.parse_debug:
+    reader = fetch.FetchingPipeline(
+        db.DebugReader(FLAGS.parse_debug))
+
+  ParsingPipeline(reader, writer).run()
  
 
 if __name__ == "__main__":

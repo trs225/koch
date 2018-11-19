@@ -1,3 +1,8 @@
+"""Abstract pipeline representing processing step.
+
+TODO:
+ - enable writing from nested pipelines.
+"""
 from __future__ import absolute_import
 
 from koch import db
