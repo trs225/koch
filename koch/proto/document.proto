@@ -2,24 +2,11 @@ syntax = "proto3";
 
 package koch.proto;
 
-message Document {
+message RawHtml {
 
   string url = 1;
 
-  int64 timestamp = 2;
-
-  map<string, string> metadata = 3;
-
-  repeated Blob blobs = 4;
-}
-
-message Blob {
-
-  string content = 1;
-
-  repeated int32 positions = 2;  
-
-  // TODO: proper sections?
+  string html = 2;
 }
 
 message HtmlElement {
@@ -44,8 +31,4 @@ message HtmlElements {
   repeated HtmlElement elements = 1;
 
   float score = 2;
-}
-
-message RawHtml {
-  string html = 1;
 }

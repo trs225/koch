@@ -48,10 +48,10 @@ def fetch(url):
 class FetchingPipeline(pipeline.Pipeline):
 
   def pipe(self, key, value):
-    url = key
     html = document_pb2.RawHtml()
+    html.url = key
     html.html = fetch(url) or ""
-    return url, html
+    return html.url, html
 
 
 def main(argv):
