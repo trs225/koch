@@ -140,23 +140,24 @@ class ParsingPipeline(pipeline.Pipeline):
     node = score(parse(tree))
     best = find_best(node)
        
-    print key
-    print "-" * len(key)
-    print best.score
-    print
-    print_nodes(best)
-    print
+    # print key
+    # print "-" * len(key)
+    # print best.score
+    # print
+    # print_nodes(best)
+    # print
 
-    # return key, best
+    return key, best
   
 
 def main(argv):
   reader = db.ProtoDbReader(document_pb2.RawHtml, FLAGS.parse_input)
-  writer = db.DebugWriter()
+  writer = db.ProtoDbWriter(document_pb2.HtmlElements, FLAGS.parse_output)
 
   if FLAGS.parse_debug:
     reader = fetch.FetchingPipeline(
         db.DebugReader(FLAGS.parse_debug), writer)
+    writer = db.DebugWriter()
 
   ParsingPipeline(reader, writer).run()
  

@@ -31,11 +31,15 @@ class Manager(object):
 
 class Reader(object):
 
+  def __init__(self, manager):
+    self.manager = manager
+
   def __enter__(self):
+    self.manager.__enter__()
     return self
 
   def __exit__(self, *args):
-    return
+    self.manager.__exit__(*args)
 
   def __iter__(self):
     raise NotImplementedError
@@ -47,22 +51,40 @@ class Reader(object):
     return key, value
 
 
-class DbReader(Reader):
-  
+class JoiningReader(Reader):
+
+  def __init__(self, reader, other_reader):
+    self.reader = reader
+    self.other_reader = other_reader
+
   def __enter__(self):
-    return self.manager.__enter__()
+    self.reader.__enter__()
+    self.other_reader.__enter__()
+    return self
 
   def __exit__(self, *args):
-    return self.manager.__exit__()
-
-  def __init__(self, path, **kwargs):
-    self.manager = Manager(plyvel.DB, path, **kwargs)
+    self.reader.__exit__(*args)
+    self.other_reader.__exit__(*args)
 
   def __iter__(self):
-    with self.manager:
-      with self.manager.db.iterator() as it:
-        for key, value in it:
-          yield self.map(key, value)
+    for key, value in self.reader:
+      other_value = self.other_reader.get(key)
+      yield key, (value, other_value)
+
+
+class DbReader(Reader):
+  
+  def __init__(self, path, **kwargs):
+    super(DbReader, self).__init__(
+        Manager(plyvel.DB, path, **kwargs))
+
+  def __iter__(self):
+    with self.manager.db.iterator() as it:
+      for key, value in it:
+        yield self.map(key, value)
+
+  def get(self, key):
+    return self.map(key, self.manager.db.get(key))
 
 
 class ProtoDbReader(DbReader):
@@ -80,21 +102,27 @@ class ProtoDbReader(DbReader):
 class CsvReader(Reader):
 
   def __init__(self, path, key, val=None, **kwargs):
-    self.manager = Manager(open, path, "r")
+    super(CsvReader, self).__init__(Manager(open, path, "r"))
     self.key = key
     self.val = val
 
   def __iter__(self):
-    with self.manager:
-      for row in csv.DictReader(self.manager.db):
-        yield row[self.key], row.get(self.val, row)
+    for row in csv.DictReader(self.manager.db):
+      yield row[self.key], row.get(self.val, row)
 
 
 class DebugReader(Reader):
 
   def __init__(self, keys, values=None):
+    super(DebugReader, self).__init__(None)
     self.keys = keys
     self.values = values or [None] * len(keys)
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *args):
+    return 
 
   def __iter__(self):
     for k, v in zip(self.keys, self.values):
@@ -103,11 +131,15 @@ class DebugReader(Reader):
 
 class Writer(object):
 
+  def __init__(self, manager):
+    self.manager = manager
+
   def __enter__(self):
+    self.manager.__enter__()
     return self
 
   def __exit__(self, *args):
-    return
+    self.manager.__exit__(*args)
 
   def map(self, key, value):
     return key, value
@@ -125,17 +157,9 @@ class DbWriter(Writer):
   }
 
   def __init__(self, path, **kwargs):
-    self.manager = Manager(
-        plyvel.DB, path, **dict(DbWriter.defaults, **kwargs))
-
-  def __enter__(self):
-    super(DbWriter, self).__enter__()
-    self.manager.__enter__()
-    return self
-
-  def __exit__(self, *args):
-    self.manager.__exit__()
-    super(DbWriter, self).__exit__()
+    super(DbWriter, self).__init__(
+        Manager(plyvel.DB, path, **dict(
+            DbWriter.defaults, **kwargs)))
 
   def write(self, key, value):
     self.manager.check()
@@ -155,22 +179,20 @@ class ProtoDbWriter(DbWriter):
 class CsvWriter(Writer):
 
   def __init__(self, path, key, val, **kwargs):
-    self.manager = Manager(open, path, "w")
+    super(CsvWriter, self).__init__(Manager(open, path, "w"))
     self.fieldnames = [key, val]
     self.key = key
     self.val = val
 
   def __enter__(self):
     super(CsvWriter, self).__enter__()
-    self.manager.__enter__()
     self.writer = csv.DictWriter(
         self.manager.db, self.fieldnames)
     return self
 
   def __exit__(self, *args):
     self.writer = None
-    self.manager.__exit__()
-    super(CsvWriter, self).__exit__()
+    super(CsvWriter, self).__exit__(*args)
 
   def write(self, key, value):
     key, value = self.map(key, value)
@@ -178,7 +200,22 @@ class CsvWriter(Writer):
         {self.key: key, self.val: value})
 
 
-class DebugWriter(Writer):
+class FakeWriter(Writer):
+
+  def __init__(self):
+    super(FakeWriter, self).__init__(None)
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, *args):
+    return
+
+  def write(self, key, value):
+    return
+
+
+class DebugWriter(FakeWriter):
 
   def write(self, key, value):
     print self.map(key, value)

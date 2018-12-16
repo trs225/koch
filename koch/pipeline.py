@@ -11,18 +11,28 @@ from koch import db
 
 class Pipeline(object):
   
-  def __init__(self, reader, writer):
+  def __init__(self, reader, writer=None):
     self.reader = reader
-    self.writer = writer
+    self.writer = writer or db.FakeWriter()
+
+  def __enter__(self):
+    self.reader.__enter__()
+    self.writer.__enter__()
+    return self
+
+  def __exit__(self, *args):
+    self.writer.__exit__(*args)
+    self.reader.__exit__(*args)
 
   def __iter__(self):
     for k, v in self.reader:
-      yield self.pipe(k, v)
+      out = self.pipe(k, v)
+      if out: yield out
       
   def run(self):
-    with self.writer:
+    with self:
       for out in self:
-        if out: self.writer.write(*out)
+        self.writer.write(*out)
 
   def pipe(self, key, value):
     return key, value

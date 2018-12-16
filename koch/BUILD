@@ -43,3 +43,14 @@ py_binary(
       "//koch/proto:document_py_proto",
     ],
 )
+
+py_binary(
+    name = "eval",
+    srcs = ["eval.py"],
+    deps = [
+      ":db",
+      ":parse",
+      ":pipeline",
+      "//koch/proto:document_py_proto",
+    ],
+)
