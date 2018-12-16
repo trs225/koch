@@ -48,15 +48,16 @@ def fetch(url):
 class FetchingPipeline(pipeline.Pipeline):
 
   def pipe(self, key, value):
+    url = key
     html = document_pb2.RawHtml()
-    html.url = key
+    html.url = url
     html.html = fetch(url) or ""
-    return html.url, html
+    return url, html
 
 
 def main(argv):
   reader = db.CsvReader(FLAGS.fetch_input, key=FLAGS.fetch_column)
-  writer = db.ProtoWriter(document_pb2.RawHtml, FLAGS.fetch_output)
+  writer = db.ProtoDbWriter(document_pb2.RawHtml, FLAGS.fetch_output)
  
   if FLAGS.sample_number:
     random.seed(0)

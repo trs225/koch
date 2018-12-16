@@ -151,12 +151,12 @@ class ParsingPipeline(pipeline.Pipeline):
   
 
 def main(argv):
-  reader = db.ProtoReader(document_pb2.RawHtml, FLAGS.parse_input)
+  reader = db.ProtoDbReader(document_pb2.RawHtml, FLAGS.parse_input)
   writer = db.DebugWriter()
 
   if FLAGS.parse_debug:
     reader = fetch.FetchingPipeline(
-        db.DebugReader(FLAGS.parse_debug))
+        db.DebugReader(FLAGS.parse_debug), writer)
 
   ParsingPipeline(reader, writer).run()
  

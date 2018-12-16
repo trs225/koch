@@ -38,21 +38,20 @@ class SamplingPipeline(pipeline.Pipeline):
 
   def __iter__(self):
     out = []
-    with self:
-      for i, (k, v) in enumerate(self.reader):
-        if i < self.n:
-          out.append((k, v))
-        else:
-          sample((k, v), i, out)
+    for i, (k, v) in enumerate(self.reader):
+      if i < self.n:
+        out.append((k, v))
+      else:
+        sample((k, v), i, out)
 
-      for k, v in out:
-        yield k, v
+    for k, v in out:
+      yield k, v
 
 
 def main(argv):
   random.seed(0)
-  reader = db.Reader(FLAGS.sample_input)
-  writer = db.Writer(FLAGS.sample_output)
+  reader = db.DbReader(FLAGS.sample_input)
+  writer = db.DbWriter(FLAGS.sample_output)
 
   if FLAGS.sample_input_csv:
     reader = db.CsvReader(
