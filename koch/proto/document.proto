@@ -32,3 +32,13 @@ message HtmlElements {
 
   float score = 2;
 }
+
+message Blob {
+
+  string text = 1;
+}
+
+message Document {
+
+  repeated Blob blobs = 1;
+}

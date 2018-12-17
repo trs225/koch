@@ -47,13 +47,14 @@ class Reader(object):
   def get(self, key):
     raise NotImplementedError
 
-  def map(self, key, value):
-    return key, value
+  def map(self, value):
+    return value
 
 
 class JoiningReader(Reader):
 
   def __init__(self, reader, other_reader):
+    super(JoiningReader, self).__init__(None)
     self.reader = reader
     self.other_reader = other_reader
 
@@ -81,10 +82,10 @@ class DbReader(Reader):
   def __iter__(self):
     with self.manager.db.iterator() as it:
       for key, value in it:
-        yield self.map(key, value)
+        yield key, self.map(value)
 
   def get(self, key):
-    return self.map(key, self.manager.db.get(key))
+    return self.map(self.manager.db.get(key))
 
 
 class ProtoDbReader(DbReader):
@@ -93,10 +94,10 @@ class ProtoDbReader(DbReader):
     super(ProtoDbReader, self).__init__(path, **kwargs)
     self.proto = proto
   
-  def map(self, key, value):
+  def map(self, value):
     proto = self.proto()
     proto.ParseFromString(value)
-    return key, proto
+    return proto
 
 
 class CsvReader(Reader):
@@ -126,7 +127,7 @@ class DebugReader(Reader):
 
   def __iter__(self):
     for k, v in zip(self.keys, self.values):
-      yield self.map(k, v)
+      yield k, self.map(v)
 
 
 class Writer(object):
@@ -141,8 +142,8 @@ class Writer(object):
   def __exit__(self, *args):
     self.manager.__exit__(*args)
 
-  def map(self, key, value):
-    return key, value
+  def map(self, value):
+    return value
 
   def write(self, key, value):
     raise NotImplementedError
@@ -163,7 +164,7 @@ class DbWriter(Writer):
 
   def write(self, key, value):
     self.manager.check()
-    self.manager.db.put(*self.map(key, value))
+    self.manager.db.put(key, self.map(value))
 
 
 class ProtoDbWriter(DbWriter):
@@ -172,8 +173,8 @@ class ProtoDbWriter(DbWriter):
     super(ProtoDbWriter, self).__init__(path, **kwargs)
     self.proto = proto
 
-  def map(self, key, value):
-    return key, value.SerializeToString()
+  def map(self, value):
+    return value.SerializeToString()
 
 
 class CsvWriter(Writer):
@@ -195,9 +196,8 @@ class CsvWriter(Writer):
     super(CsvWriter, self).__exit__(*args)
 
   def write(self, key, value):
-    key, value = self.map(key, value)
     self.writer.writerow(
-        {self.key: key, self.val: value})
+        {self.key: key, self.val: self.map(value)})
 
 
 class FakeWriter(Writer):
@@ -218,4 +218,4 @@ class FakeWriter(Writer):
 class DebugWriter(FakeWriter):
 
   def write(self, key, value):
-    print self.map(key, value)
+    print key, self.map(value)

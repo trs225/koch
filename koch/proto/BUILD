@@ -6,3 +6,11 @@ py_proto_library(
     name = "document_py_proto",
     protos = ["document.proto"],
 )
+
+py_library(
+    name = "util",
+    srcs = ["util.py"],
+    deps = [
+      ":document_py_proto"
+    ],
+)

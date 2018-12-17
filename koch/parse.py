@@ -42,7 +42,7 @@ def is_valid(html):
 
 
 def get_text(string):
-  if string:
+  if string and not string.isspace():
     return re2.sub(r"\s+", " ", string)
   else:
     return ""
@@ -109,8 +109,6 @@ def score(node):
 def find_best(node):
   best = document_pb2.HtmlElements(
     elements=[node], score=node.score)
-  best_arr_i = document_pb2.HtmlElements()
-  best_arr = None
   for child in node.children:
     child_best = find_best(child)
     if best.score < child_best.score:
@@ -118,18 +116,20 @@ def find_best(node):
   return best
 
 
-def print_node(node):
+def build_doc_helper(node, doc):
   if node.text:
-    print node.text
+    doc.blobs.add().text = node.text
   for child in node.children:
-    print_node(child)
+    build_doc_helper(child, doc)
   if node.tail:
-    print node.tail
-  
+    doc.blobs.add().text = node.tail
 
-def print_nodes(nodes):
+
+def build_doc(nodes):
+  doc = document_pb2.Document()
   for node in nodes.elements:
-    print_node(node)
+    build_doc_helper(node, doc)
+  return doc
 
 
 class ParsingPipeline(pipeline.Pipeline):
@@ -139,24 +139,17 @@ class ParsingPipeline(pipeline.Pipeline):
         value.html, treebuilder="etree", namespaceHTMLElements=False)
     node = score(parse(tree))
     best = find_best(node)
-       
-    # print key
-    # print "-" * len(key)
-    # print best.score
-    # print
-    # print_nodes(best)
-    # print
 
-    return key, best
+    return key, build_doc(best)
   
 
 def main(argv):
   reader = db.ProtoDbReader(document_pb2.RawHtml, FLAGS.parse_input)
-  writer = db.ProtoDbWriter(document_pb2.HtmlElements, FLAGS.parse_output)
+  writer = db.ProtoDbWriter(document_pb2.Document, FLAGS.parse_output)
 
   if FLAGS.parse_debug:
     reader = fetch.FetchingPipeline(
-        db.DebugReader(FLAGS.parse_debug), writer)
+        db.DebugReader(FLAGS.parse_debug))
     writer = db.DebugWriter()
 
   ParsingPipeline(reader, writer).run()

@@ -1,11 +1,11 @@
 
 py_library(
     name = "db",
-   srcs = ["db.py"],
+    srcs = ["db.py"],
 )
 
 
-py_binary(
+py_library(
     name = "pipeline",
     srcs = ["pipeline.py"],
     deps = [
@@ -52,5 +52,6 @@ py_binary(
       ":parse",
       ":pipeline",
       "//koch/proto:document_py_proto",
+      "//koch/proto:util",
     ],
 )
