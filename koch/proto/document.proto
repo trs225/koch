@@ -36,6 +36,10 @@ message HtmlElements {
 message Blob {
 
   string text = 1;
+
+  repeated string words = 2;
+
+  repeated int32 position = 3;
 }
 
 message Document {
