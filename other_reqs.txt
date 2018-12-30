@@ -1,0 +1,3 @@
+brew install bazel
+brew install leveldb
+brew install re2

@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package koch.proto;
+
+message RawHtml {
+
+  string url = 1;
+
+  string html = 2;
+}
+
+message HtmlElement {
+
+  string tag = 1;
+
+  string text = 2;
+
+  string tail = 3;
+
+  map<string, string> attrib = 4;
+
+  repeated HtmlElement children = 5;
+
+  map<string, float> weight = 6;
+
+  float score = 7;
+}
+
+message HtmlElements {
+
+  repeated HtmlElement elements = 1;
+
+  float score = 2;
+}
+
+message Blob {
+
+  string text = 1;
+
+  repeated string words = 2;
+
+  repeated int32 position = 3;
+}
+
+message Document {
+
+  repeated Blob blobs = 1;
+}
