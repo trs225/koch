@@ -34,11 +34,22 @@ py_binary(
 )
 
 py_binary(
+    name = "extract",
+    srcs = ["extract.py"],
+    deps = [
+      ":db",
+      ":fetch",
+      ":pipeline",
+      "//koch/proto:document_py_proto",
+    ],
+)
+
+py_binary(
     name = "parse",
     srcs = ["parse.py"],
     deps = [
       ":db",
-      ":fetch",
+      ":extract",
       ":pipeline",
       "//koch/proto:document_py_proto",
     ],
