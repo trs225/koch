@@ -4,8 +4,6 @@ from __future__ import absolute_import
 import csv
 import plyvel
 
-from absl import logging
-
 
 class Manager(object):
 
@@ -20,7 +18,7 @@ class Manager(object):
     return self
 
   def __exit__(self, *args):
-    if hasattr(self.db, 'close'):
+    if hasattr(self.db, "close"):
       self.db.close()
     self.db = None
 
@@ -95,9 +93,10 @@ class ProtoDbReader(DbReader):
     self.proto = proto
   
   def map(self, value):
-    proto = self.proto()
-    proto.ParseFromString(value)
-    return proto
+      proto = self.proto()
+      if value:
+        proto.ParseFromString(value)
+      return proto
 
 
 class CsvReader(Reader):
@@ -154,7 +153,8 @@ class DbWriter(Writer):
   defaults = {
     "create_if_missing": True,
     "error_if_exists": True,
-    "write_buffer_size": 2 * 1024 * 1024,
+    "max_file_size": 2 << 20,
+    "write_buffer_size": 2 << 20,
   }
 
   def __init__(self, path, **kwargs):
@@ -219,3 +219,22 @@ class DebugWriter(FakeWriter):
 
   def write(self, key, value):
     print key, self.map(value)
+
+
+class Rewriter(Reader, Writer):
+
+  def __init__(self, reader, writer):
+    super(Rewriter, self).__init__(writer.manager)
+    reader.manager = writer.manager
+    self.reader = reader
+    self.writer = writer
+
+  def __iter__(self):
+    for out in self.reader:
+      yield out
+
+  def get(self, key):
+    return self.reader.get(key)
+
+  def write(self, key, value):
+    return self.writer.write(key, value)

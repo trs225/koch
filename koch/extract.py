@@ -118,16 +118,18 @@ def find_best(node):
 class ExtractionPipeline(pipeline.Pipeline):
   
   def pipe(self, key, value):
+    raw_html = value
     tree = html5lib.parse(
-        value.html, treebuilder="etree", namespaceHTMLElements=False)
+        raw_html.html, treebuilder="etree", namespaceHTMLElements=False)
     node = score(parse(tree))
     best = find_best(node)
+    best.url = raw_html.url
 
-    return key, best
+    yield key, best
   
 
 def main(argv):
-  reader = db.ProtoDbReader(document_pb2.RawHtml, FLAGS.extract_input)
+  reader = db.ProtoDbReader(document_pb2.RawHtml, FLAGS.fetch_output)
   writer = db.ProtoDbWriter(document_pb2.HtmlElements, FLAGS.extract_output)
 
   if FLAGS.extract_debug:

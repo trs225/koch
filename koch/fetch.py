@@ -52,7 +52,8 @@ class FetchingPipeline(pipeline.Pipeline):
     html = document_pb2.RawHtml()
     html.url = url
     html.html = fetch(url) or ""
-    return url, html
+
+    yield url, html
 
 
 def main(argv):

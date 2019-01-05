@@ -3,6 +3,7 @@
 TODO:
  - filter on blob length/position
  - sentence segmentation
+ - remove bad words
 """
 from __future__ import absolute_import
 
@@ -40,6 +41,7 @@ def build_doc_helper(node, doc, pos):
 
 def build_doc(nodes):
   doc = document_pb2.Document()
+  doc.url = nodes.url
   for i, node in enumerate(nodes.elements):
     build_doc_helper(node, doc, [i])
   return doc
@@ -61,7 +63,7 @@ class ParsingPipeline(pipeline.Pipeline):
       lemmatized = (self.wordnet.lemmatize(t) for t in normalized if t)
       blob.words.extend(lemmatized)
 
-    return key, doc
+    yield key, doc
   
 
 def main(argv):
