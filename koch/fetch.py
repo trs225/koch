@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import contextlib
 import csv
-import datetime
+import pandas as pd
 import random
 import urllib2
 
@@ -48,9 +48,9 @@ def fetch(url):
     logging.warning("Failed to open url %s: %s", url, str(e))
 
 
-def to_epoch_seconds(string, fmt="%m/%d/%Y"):
-  date = datetime.datetime.strptime(string, fmt)
-  return int((date - datetime.datetime.fromtimestamp(0)).total_seconds())
+def to_epoch(string, format="%m/%d/%Y", unit="1s"):
+  date = pd.to_datetime(string, format=format)
+  return int((date - pd.Timestamp(0)) / pd.Timedelta(unit))
 
 
 class FetchingPipeline(pipeline.Pipeline):
@@ -66,7 +66,7 @@ class FetchingPipeline(pipeline.Pipeline):
 
     doc = document_pb2.Document()
     doc.url = url
-    doc.timestamp.seconds = to_epoch_seconds(date)
+    doc.timestamp.seconds = to_epoch(date)
     doc.raw_html.url = value[self.url_column]
     doc.raw_html.html = fetch(url) or ""
 
