@@ -30,20 +30,18 @@ def add_blob(doc, text, pos):
   blob.position.extend(pos)
 
 
-def build_doc_helper(node, doc, pos):
-  if node.text:
-    add_blob(doc, node.text, pos)
-  for i, child in enumerate(node.children):
-    build_doc_helper(child, doc, pos + [i])
-  if node.tail:
-    add_blob(doc, node.tail, pos[:-1])
+def build_blobs_helper(html_element, doc, pos):
+  if html_element.text:
+    add_blob(doc, html_element.text, pos)
+  for i, child in enumerate(html_element.children):
+    build_blobs_helper(child, doc, pos + [i])
+  if html_element.tail:
+    add_blob(doc, html_element.tail, pos[:-1])
 
 
-def build_doc(nodes):
-  doc = document_pb2.Document()
-  doc.url = nodes.url
-  for i, node in enumerate(nodes.elements):
-    build_doc_helper(node, doc, [i])
+def build_blobs(doc):
+  for i, elm in enumerate(doc.html_elements.elements):
+    build_blobs_helper(elm, doc, [i])
   return doc
 
 
@@ -55,7 +53,7 @@ class ParsingPipeline(pipeline.Pipeline):
     self.wordnet = nltk.WordNetLemmatizer()
   
   def pipe(self, key, value):
-    doc = build_doc(value)
+    doc = build_blobs(value)
     for blob in doc.blobs:
       tokens = (t.lower() for t in nltk.word_tokenize(blob.text))
       stopped = (t for t in tokens if t not in self.stopwords)
@@ -67,7 +65,7 @@ class ParsingPipeline(pipeline.Pipeline):
   
 
 def main(argv):
-  reader = db.ProtoDbReader(document_pb2.RawHtml, FLAGS.extract_input)
+  reader = db.ProtoDbReader(document_pb2.Document, FLAGS.extract_input)
   extractor = extract.ExtractionPipeline(reader)
   writer = db.ProtoDbWriter(document_pb2.Document, FLAGS.parse_output)
 

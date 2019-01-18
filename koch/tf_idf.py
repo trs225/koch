@@ -1,6 +1,7 @@
 """Scores document keywords using tf-idf.
 
 TODO:
+ - look into data loss
  - take idf as side input
  - add functions to construct pipelines
 """

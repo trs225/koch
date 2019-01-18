@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "koch/proto/timestamp.proto";
+
 package koch.proto;
 
 message RawHtml {
@@ -61,7 +63,13 @@ message Document {
 
   string url = 1;
 
+  Timestamp timestamp = 4;
+
   repeated Blob blobs = 2;
 
   repeated Keyword keywords = 3;
+
+  RawHtml raw_html = 5;
+
+  HtmlElements html_elements = 6;
 }

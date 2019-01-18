@@ -101,14 +101,14 @@ class ProtoDbReader(DbReader):
 
 class CsvReader(Reader):
 
-  def __init__(self, path, key, val=None, **kwargs):
+  def __init__(self, path, key=None, val=None):
     super(CsvReader, self).__init__(Manager(open, path, "r"))
     self.key = key
     self.val = val
 
   def __iter__(self):
     for row in csv.DictReader(self.manager.db):
-      yield row[self.key], row.get(self.val, row)
+      yield row.get(self.key), row.get(self.val, row)
 
 
 class DebugReader(Reader):
@@ -179,7 +179,7 @@ class ProtoDbWriter(DbWriter):
 
 class CsvWriter(Writer):
 
-  def __init__(self, path, key, val, **kwargs):
+  def __init__(self, path, key, val):
     super(CsvWriter, self).__init__(Manager(open, path, "w"))
     self.fieldnames = [key, val]
     self.key = key
