@@ -1,3 +1,5 @@
+# TODO: use com_google_protobuf instead
+
 git_repository(
   name = "org_pubref_rules_protobuf",
   remote = "https://github.com/pubref/rules_protobuf",

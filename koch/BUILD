@@ -66,3 +66,17 @@ py_binary(
       "//koch/proto:util",
     ],
 )
+
+py_binary(
+    name = "tf_idf",
+    srcs = ["tf_idf.py"],
+    deps = [
+      ":db",
+      ":extract",
+      ":fetch",
+      ":parse",
+      ":pipeline",
+      "//koch/proto:document_py_proto",
+      "//koch/proto:util",
+    ],
+)

@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "koch/proto/timestamp.proto";
+
 package koch.proto;
 
 message RawHtml {
@@ -28,9 +30,11 @@ message HtmlElement {
 
 message HtmlElements {
 
-  repeated HtmlElement elements = 1;
+  string url = 1;
 
-  float score = 2;
+  repeated HtmlElement elements = 2;
+
+  float score = 3;
 }
 
 message Blob {
@@ -42,7 +46,30 @@ message Blob {
   repeated int32 position = 3;
 }
 
+message Keyword {
+
+  string word = 1;
+
+  float tf_idf = 2;
+
+  int64 term_count = 3;
+
+  int64 doc_count = 4;
+
+  int64 total_doc_count = 5;
+}
+
 message Document {
 
-  repeated Blob blobs = 1;
+  string url = 1;
+
+  Timestamp timestamp = 4;
+
+  repeated Blob blobs = 2;
+
+  repeated Keyword keywords = 3;
+
+  RawHtml raw_html = 5;
+
+  HtmlElements html_elements = 6;
 }

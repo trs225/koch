@@ -26,8 +26,8 @@ class Pipeline(object):
 
   def __iter__(self):
     for k, v in self.reader:
-      out = self.pipe(k, v)
-      if out: yield out
+      for out in self.pipe(k, v):
+        yield out
       
   def run(self):
     with self:
@@ -36,3 +36,28 @@ class Pipeline(object):
 
   def pipe(self, key, value):
     return key, value
+
+
+class CombiningPipeline(Pipeline):
+
+  def __init__(self, reader, rewriter):
+    super(CombiningPipeline, self).__init__(reader, rewriter)
+
+  def __iter__(self):
+    for k, v in self.reader:
+      for piped in self.pipe(k, v):
+        key, value = piped
+        old_value = self.writer.get(key)
+        new_value = self.combine(value, old_value)
+        self.writer.write(key, new_value)
+
+    for out in self.writer:
+      yield out
+      
+  def run(self):
+    with self:
+      for out in self:
+        pass
+
+  def combine(self, value, old_value):
+    raise NotImplementedError

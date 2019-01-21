@@ -71,7 +71,7 @@ class EvalPipeline(pipeline.Pipeline):
     # print 'VAL: %s' % str(value)
 
     label, doc = value
-    pred = util.get_text(doc)
+    pred = util.GetText(doc)
 
     p = precision(pred, label)
     r = recall(pred, label)
