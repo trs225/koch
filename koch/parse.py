@@ -40,17 +40,18 @@ def build_blobs_helper(html_element, doc, pos):
 
 
 def build_blobs(doc):
-  for i, elm in enumerate(doc.html_elements.elements):
+  for i, elm in enumerate(doc.content_html.elements):
     build_blobs_helper(elm, doc, [i])
   return doc
 
 
 class ParsingPipeline(pipeline.Pipeline):
 
-  def __init__(self, reader, writer=None):
+  def __init__(self, reader, writer=None, debug=False):
     super(ParsingPipeline, self).__init__(reader, writer)
     self.stopwords = set(nltk.corpus.stopwords.words("english"))
     self.wordnet = nltk.WordNetLemmatizer()
+    self.debug = debug
   
   def pipe(self, key, value):
     doc = build_blobs(value)
@@ -61,21 +62,25 @@ class ParsingPipeline(pipeline.Pipeline):
       lemmatized = (self.wordnet.lemmatize(t) for t in normalized if t)
       blob.words.extend(lemmatized)
 
+    if not self.debug:
+      doc.ClearField("raw_html")
+      doc.ClearField("parsed_html")
+      doc.ClearField("content_html")
+
     yield key, doc
   
 
 def main(argv):
-  reader = db.ProtoDbReader(document_pb2.Document, FLAGS.extract_input)
-  extractor = extract.ExtractionPipeline(reader)
+  reader = db.ProtoDbReader(document_pb2.Document, FLAGS.extract_output)
   writer = db.ProtoDbWriter(document_pb2.Document, FLAGS.parse_output)
 
-  if FLAGS.parse_debug:
+  if not FLAGS.parse_output:
     writer = db.DebugWriter()
 
-  ParsingPipeline(extractor, writer).run()
+  ParsingPipeline(reader, writer, FLAGS.parse_debug).run()
  
 
 if __name__ == "__main__":
-  flags.mark_flag_as_required("extract_input")
+  flags.mark_flag_as_required("extract_output")
   flags.mark_flag_as_required("parse_output")
   app.run(main)

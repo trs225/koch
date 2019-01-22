@@ -30,8 +30,6 @@ message HtmlElement {
 
 message HtmlElements {
 
-  string url = 1;
-
   repeated HtmlElement elements = 2;
 
   float score = 3;
@@ -71,5 +69,7 @@ message Document {
 
   RawHtml raw_html = 5;
 
-  HtmlElements html_elements = 6;
+  HtmlElement parsed_html = 7;
+
+  HtmlElements content_html = 6;
 }

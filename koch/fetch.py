@@ -9,8 +9,10 @@ from __future__ import absolute_import
 
 import contextlib
 import csv
+import html5lib
 import pandas as pd
 import random
+import re2
 import urllib2
 
 from absl import app
@@ -53,6 +55,40 @@ def to_epoch(string, format="%m/%d/%Y", unit="1s"):
   return int((date - pd.Timestamp(0)) / pd.Timedelta(unit))
 
 
+def is_valid(html):
+  if callable(html.tag):
+    return False
+  elif html.tag in ("iframe", "noscript", "script", "style"):
+    return False
+  else:
+    return True
+
+
+def get_text(string):
+  if string and not string.isspace():
+    return re2.sub(r"\s+", " ", string)
+  else:
+    return ""
+
+
+def to_html_element(html, proto):
+  proto.tag = html.tag
+  proto.text = get_text(html.text)
+  proto.tail = get_text(html.tail)
+  for key, val in html.attrib.iteritems():
+    if key != "style":
+      proto.attrib[key] = val
+  return proto
+
+
+def build_html_element(html, proto):
+  proto = to_html_element(html, proto)
+  for child in html:
+    if is_valid(child):
+      build_html_element(child, proto.children.add())
+  return proto
+
+
 class FetchingPipeline(pipeline.Pipeline):
 
   def __init__(self, url_column, date_column, reader, writer=None):
@@ -70,6 +106,10 @@ class FetchingPipeline(pipeline.Pipeline):
     doc.raw_html.url = value[self.url_column]
     doc.raw_html.html = fetch(url) or ""
 
+    tree = html5lib.parse(
+        doc.raw_html.html, treebuilder="etree", namespaceHTMLElements=False)
+    build_html_element(tree, doc.parsed_html)
+
     yield url, doc
 
 
@@ -83,6 +123,8 @@ def main(argv):
 
   if FLAGS.fetch_debug:
     reader = db.DebugReader(FLAGS.fetch_debug)
+
+  if not FLAGS.fetch_output:
     writer = db.DebugWriter()
 
   FetchingPipeline(

@@ -97,5 +97,6 @@ def main(argv):
 
 if __name__ == "__main__":
   flags.mark_flag_as_required("eval_input")
+  flags.mark_flag_as_required("parse_output")
   flags.mark_flag_as_required("eval_output")
   app.run(main)
