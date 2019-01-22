@@ -30,19 +30,13 @@ def add_blob(doc, text, pos):
   blob.position.extend(pos)
 
 
-def build_blobs_helper(html_element, doc, pos):
+def build_blobs(html_element, doc, pos):
   if html_element.text:
     add_blob(doc, html_element.text, pos)
   for i, child in enumerate(html_element.children):
-    build_blobs_helper(child, doc, pos + [i])
+    build_blobs(child, doc, pos + [i])
   if html_element.tail:
     add_blob(doc, html_element.tail, pos[:-1])
-
-
-def build_blobs(doc):
-  for i, elm in enumerate(doc.content_html.elements):
-    build_blobs_helper(elm, doc, [i])
-  return doc
 
 
 class ParsingPipeline(pipeline.Pipeline):
@@ -54,7 +48,10 @@ class ParsingPipeline(pipeline.Pipeline):
     self.debug = debug
   
   def pipe(self, key, value):
-    doc = build_blobs(value)
+    doc = value
+    for i, elm in enumerate(doc.content_html.elements):
+      build_blobs(elm, doc, [i])
+
     for blob in doc.blobs:
       tokens = (t.lower() for t in nltk.word_tokenize(blob.text))
       stopped = (t for t in tokens if t not in self.stopwords)

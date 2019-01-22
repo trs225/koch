@@ -67,16 +67,13 @@ def recall(pred, label):
 class EvalPipeline(pipeline.Pipeline):
   
   def pipe(self, key, value):
-    # print 'KEY: %s' % key
-    # print 'VAL: %s' % str(value)
-
     label, doc = value
     pred = util.GetText(doc)
 
     p = precision(pred, label)
     r = recall(pred, label)
 
-    return key, "Precision: %f Recall: %f" % (p, r)
+    yield key, {"precision": p, "recall": r}
 
 
 def main(argv):

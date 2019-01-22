@@ -26,13 +26,13 @@ class Pipeline(object):
 
   def __iter__(self):
     for k, v in self.reader:
-      for out in self.pipe(k, v):
-        yield out
+      for key, val in self.pipe(k, v):
+          yield key, val
       
   def run(self):
     with self:
-      for out in self:
-        self.writer.write(*out)
+      for key, val in self:
+        self.writer.write(key, val)
 
   def pipe(self, key, value):
     return key, value

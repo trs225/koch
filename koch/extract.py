@@ -7,9 +7,6 @@ TODO:
 """
 from __future__ import absolute_import
 
-import html5lib
-import re2
-
 from absl import app
 from absl import flags
 
