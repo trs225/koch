@@ -110,6 +110,8 @@ class FetchingPipeline(pipeline.Pipeline):
         doc.raw_html.html, treebuilder="etree", namespaceHTMLElements=False)
     build_html_element(tree, doc.parsed_html)
 
+    print "URL: %s" % url
+
     yield url, doc
 
 
@@ -125,7 +127,8 @@ def main(argv):
     reader = db.DebugReader(FLAGS.fetch_debug)
 
   if not FLAGS.fetch_output:
-    writer = db.DebugWriter()
+    # writer = db.DebugWriter()
+    writer = None
 
   FetchingPipeline(
       FLAGS.fetch_url_column, FLAGS.fetch_date_column, reader, writer).run()

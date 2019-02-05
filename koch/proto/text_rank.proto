@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package koch.proto;
+
+message Token {
+
+  string text = 1;
+
+  float weight = 2;
+
+  repeated Mention mentions = 3;
+}
+
+message Mention {
+
+  int32 token = 1;
+
+  int32 blob = 2;
+}
+
+message Edge {
+
+  string from_token = 1;
+
+  float weight = 2;
+
+  string to_token = 3;
+}
+
+message Graph {
+
+  repeated Token tokens = 1;
+
+  repeated Edge edges = 2;
+}

@@ -13,8 +13,6 @@ from absl import app
 from absl import flags
 
 from koch import db
-from koch import extract
-from koch import fetch
 from koch import parse
 from koch import pipeline
 from koch.proto import document_pb2
@@ -22,16 +20,14 @@ from koch.proto import util
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("tmp_output", None, "Output path to write parsed html to.")
-flags.DEFINE_string("tf_idf_output", None, "Output path to write parsed html to.")
-
-flags.DEFINE_boolean("tf_idf_debug", False, "Whether to use the debug writer.")
+flags.DEFINE_string("tf_idf_output", None, "Output path to write tf-idf results to.")
 
 
 class TfPipeline(pipeline.Pipeline):
 
   def pipe(self, key, value):
     doc = value
-    for word in set(util.IterWords(doc)):
+    for word in set(w.text for w in util.IterWords(doc)):
       new_doc = document_pb2.Document()
       new_doc.CopyFrom(doc)
       
@@ -51,7 +47,7 @@ class IdfPipeline(pipeline.CombiningPipeline):
   
   def pipe(self, key, value):
     doc = value
-    for word in set(util.IterWords(doc)):
+    for word in set(w.text for w in util.IterWords(doc)):
       keyword = document_pb2.Keyword()
       keyword.word = word
       keyword.doc_count = 1
@@ -81,7 +77,7 @@ class TfIdfPipeline(pipeline.CombiningPipeline):
     doc, keyword = value
     term_count = 0
     doc_term_count = 0
-    for word in util.IterWords(doc):
+    for word in (w.text for w in util.IterWords(doc)):
       doc_term_count += 1
       if word == keyword.word:
         term_count += 1

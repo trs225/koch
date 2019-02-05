@@ -28,7 +28,7 @@ flags.DEFINE_string("eval_input_val", None, "Name of the input csv val column.")
 
 def get_word_counts(string):
   out = {}
-  for word in re2.split(r'\W', string):
+  for word in re2.split(r"\W", string):
     if word in out:
       out[word] += 1
     else:

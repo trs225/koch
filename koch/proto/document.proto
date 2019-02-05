@@ -35,11 +35,18 @@ message HtmlElements {
   float score = 3;
 }
 
+message Word {
+
+  string text = 1;
+
+  int32 index = 2;
+}
+
 message Blob {
 
   string text = 1;
 
-  repeated string words = 2;
+  repeated Word words = 4;
 
   repeated int32 position = 3;
 }
@@ -47,6 +54,8 @@ message Blob {
 message Keyword {
 
   string word = 1;
+
+  float text_rank = 6;
 
   float tf_idf = 2;
 

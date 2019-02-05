@@ -27,7 +27,7 @@ class Pipeline(object):
   def __iter__(self):
     for k, v in self.reader:
       for key, val in self.pipe(k, v):
-          yield key, val
+        yield key, val
       
   def run(self):
     with self:

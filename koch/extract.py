@@ -36,8 +36,8 @@ def measure_neg(html_element):
   return 2 * len(html_element.tag) + len(str(html_element.attrib or ""))
 
 
-_positive = 'pos'
-_negative = 'neg'
+_positive = "pos"
+_negative = "neg"
 
 
 def weight_html_element(html_element):

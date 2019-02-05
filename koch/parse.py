@@ -53,11 +53,12 @@ class ParsingPipeline(pipeline.Pipeline):
       build_blobs(elm, doc, [i])
 
     for blob in doc.blobs:
-      tokens = (t.lower() for t in nltk.word_tokenize(blob.text))
-      stopped = (t for t in tokens if t not in self.stopwords)
-      normalized = (re2.sub(r"\W+", "", t) for t in stopped)
-      lemmatized = (self.wordnet.lemmatize(t) for t in normalized if t)
-      blob.words.extend(lemmatized)
+      tokens = ((i, t.lower()) for i, t in enumerate(nltk.word_tokenize(blob.text)))
+      stopped = ((i, t) for i, t in tokens if t not in self.stopwords)
+      normalized = ((i, re2.sub(r"\W+", "", t)) for i, t in stopped)
+      lemmatized = ((i, self.wordnet.lemmatize(t)) for i, t in normalized if t)
+      for index, text in lemmatized:
+        blob.words.add(index=index, text=text)
 
     if not self.debug:
       doc.ClearField("raw_html")
