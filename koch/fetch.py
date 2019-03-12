@@ -30,9 +30,13 @@ flags.DEFINE_string("fetch_output", None, "Output path to write fetched html to.
 flags.DEFINE_multi_string("fetch_debug", None, "Input urls to debug.")
 
 flags.DEFINE_string(
+    "fetch_url_pattern", None, "URL pattern to restrict to.")
+flags.DEFINE_string(
     "fetch_url_column", "URL for Content", "Name of url column in csv file.")
 flags.DEFINE_string(
     "fetch_date_column", "Date of Content Posting", "Name of date column in csv file.")
+flags.DEFINE_multi_string(
+    "fetch_metadata_column", [], "Names of csv metadata columns to retain.")
 
 _HEADERS = {
   "User-Agent": "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11"
@@ -89,34 +93,46 @@ def build_html_element(html, proto):
   return proto
 
 
-class FetchingPipeline(pipeline.Pipeline):
+class UrlFilterPipeline(pipeline.Pipeline):
 
-  def __init__(self, url_column, date_column, reader, writer=None):
-    super(FetchingPipeline, self).__init__(reader, writer)
-    self.url_column = url_column
-    self.date_column = date_column
+  def __init__(self, pattern, reader, writer=None):
+    super(UrlFilterPipeline, self).__init__(reader, writer)
+    self.pattern = re2.compile(pattern)
 
   def pipe(self, key, value):
-    url = value[self.url_column]
-    date = value[self.date_column]
+    if key and self.pattern.match(key):
+      yield key, value
 
+
+class FetchingPipeline(pipeline.Pipeline):
+
+  def __init__(
+      self, date_column, metadata_columns, reader, writer=None):
+    super(FetchingPipeline, self).__init__(reader, writer)
+    self.date_column = date_column
+    self.metadata_columns = metadata_columns
+
+  def pipe(self, key, value):
     doc = document_pb2.Document()
-    doc.url = url
-    doc.timestamp.seconds = to_epoch(date)
-    doc.raw_html.url = value[self.url_column]
-    doc.raw_html.html = fetch(url) or ""
+    doc.url = key
+    doc.timestamp.seconds = to_epoch(value[self.date_column])
+    for col in self.metadata_columns:
+      if value[col]:
+        doc.metadata[col] = value[col]
+
+    doc.raw_html.url = key
+    doc.raw_html.html = fetch(key) or ""
 
     tree = html5lib.parse(
         doc.raw_html.html, treebuilder="etree", namespaceHTMLElements=False)
     build_html_element(tree, doc.parsed_html)
 
-    print "URL: %s" % url
-
-    yield url, doc
+    yield key, doc
 
 
 def main(argv):
-  reader = db.CsvReader(FLAGS.fetch_input)
+  reader = UrlFilterPipeline(
+    FLAGS.fetch_url_pattern, db.CsvReader(FLAGS.fetch_input, FLAGS.fetch_url_column))
   writer = db.ProtoDbWriter(document_pb2.Document, FLAGS.fetch_output)
  
   if FLAGS.sample_number:
@@ -127,11 +143,10 @@ def main(argv):
     reader = db.DebugReader(FLAGS.fetch_debug)
 
   if not FLAGS.fetch_output:
-    # writer = db.DebugWriter()
-    writer = None
+    writer = db.DebugWriter()
 
   FetchingPipeline(
-      FLAGS.fetch_url_column, FLAGS.fetch_date_column, reader, writer).run()
+      FLAGS.fetch_date_column, FLAGS.fetch_metadata_column, reader, writer).run()
 
 
 if __name__ == "__main__":

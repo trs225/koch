@@ -38,13 +38,14 @@ def get_adjacency_matrix(graph, edge_builder):
   matrix = [[0 for j in index] for i in index]
   for i in index:
     for j in index:
-      from_token = graph.tokens[i]
-      to_token = graph.tokens[j]
-      weight = edge_builder(from_token, to_token)
-      if weight and i != j:
-        matrix[i][j] = weight
-        graph.edges.add(
-            from_token=from_token.text, weight=weight, to_token=to_token.text)
+      if i != j:
+        from_token = graph.tokens[i]
+        to_token = graph.tokens[j]
+        weight = edge_builder(from_token, to_token)
+        if weight:
+          matrix[i][j] = weight
+          graph.edges.add(
+              from_token=from_token.text, weight=weight, to_token=to_token.text)
 
   return matrix
 
@@ -139,10 +140,8 @@ class TextRankPipeline(pipeline.Pipeline):
     to_mentions = {m.blob: m for m in to_token.mentions}
     for from_mention in from_token.mentions:
       if from_mention.blob in to_mentions:
-        # distance = abs(from_mention.token - to_mentions[from_mention.blob].token)
-        # weight += 1.0 / distance ** 2 if distance else 0
-        if from_mention.token != to_mentions[from_mention.blob].token:
-          weight += 1
+        distance = abs(from_mention.token - to_mentions[from_mention.blob].token)
+        weight += 1.0 / distance if distance else 0
 
     return weight
 

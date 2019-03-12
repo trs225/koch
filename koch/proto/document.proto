@@ -72,6 +72,8 @@ message Document {
 
   Timestamp timestamp = 4;
 
+  map<string, string> metadata = 8;
+
   repeated Blob blobs = 2;
 
   repeated Keyword keywords = 3;

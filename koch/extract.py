@@ -103,7 +103,7 @@ def main(argv):
   if not FLAGS.extract_output:
     writer = db.DebugWriter()
 
-  ExtractionPipeline(reader, writer, FLAGS.fetch_debug).run()
+  ExtractionPipeline(reader, writer, FLAGS.extract_debug).run()
  
 
 if __name__ == "__main__":
