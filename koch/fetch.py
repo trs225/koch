@@ -29,6 +29,8 @@ flags.DEFINE_string("fetch_input", None, "Input path to csv of urls to fetch.")
 flags.DEFINE_string("fetch_output", None, "Output path to write fetched html to.")
 flags.DEFINE_multi_string("fetch_debug", None, "Input urls to debug.")
 
+flags.DEFINE_bool(
+    "fetch_web_archive", False, "Whether to fetch only web archive URLs.")
 flags.DEFINE_string(
     "fetch_url_pattern", None, "URL pattern to restrict to.")
 flags.DEFINE_string(
@@ -47,11 +49,18 @@ def fetch(url):
   try:
     r = urllib2.Request(url, headers=_HEADERS)
     with contextlib.closing(urllib2.urlopen(r)) as conn:
-      encoding = conn.headers.getparam("charset") or "utf-8"
-      logging.info("Fetching %s", url)
-      return conn.read().decode(encoding)
+      html = conn.read()
+      logging.info("Fetched url %s", url)
+      encoding = conn.headers.getparam("charset") or "UTF-8"
+      for en in (encoding, "ISO-8859-1", "Windows-1252", "ASCII"):
+        try:
+          return html.decode(en)
+        except Exception as e:
+          continue
+      else:
+        raise ValueError
   except Exception as e:
-    logging.warning("Failed to open url %s: %s", url, str(e))
+    logging.warning("Failed url %s: %s", url, str(e))
 
 
 def to_epoch(string, format="%m/%d/%Y", unit="1s"):
@@ -104,6 +113,21 @@ class UrlFilterPipeline(pipeline.Pipeline):
       yield key, value
 
 
+class WebArchivePipeline(pipeline.Pipeline):
+
+  def __init__(self, reader, writer=None):
+    super(WebArchivePipeline, self).__init__(
+        UrlFilterPipeline(r".*web.archive.org.*", reader), writer)
+    self.id_pattern = re2.compile(r"/\d{14}/")
+    self.id_string = "id_/"
+
+  def add_id(self, match):
+    return match.string[match.start():match.end() - 1] + self.id_string
+
+  def pipe(self, key, value):
+    yield re2.sub(self.id_pattern, self.add_id, key, 1), value
+
+
 class FetchingPipeline(pipeline.Pipeline):
 
   def __init__(
@@ -131,9 +155,14 @@ class FetchingPipeline(pipeline.Pipeline):
 
 
 def main(argv):
-  reader = UrlFilterPipeline(
-    FLAGS.fetch_url_pattern, db.CsvReader(FLAGS.fetch_input, FLAGS.fetch_url_column))
+  reader = db.CsvReader(FLAGS.fetch_input, FLAGS.fetch_url_column)
   writer = db.ProtoDbWriter(document_pb2.Document, FLAGS.fetch_output)
+
+  if FLAGS.fetch_url_pattern:
+    reader = UrlFilterPipeline(FLAGS.fetch_url_pattern, reader)
+
+  if FLAGS.fetch_web_archive:
+    reader = WebArchivePipeline(reader)
  
   if FLAGS.sample_number:
     random.seed(0)
