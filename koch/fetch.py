@@ -29,8 +29,6 @@ flags.DEFINE_string("fetch_input", None, "Input path to csv of urls to fetch.")
 flags.DEFINE_string("fetch_output", None, "Output path to write fetched html to.")
 flags.DEFINE_multi_string("fetch_debug", None, "Input urls to debug.")
 
-flags.DEFINE_bool(
-    "fetch_web_archive", False, "Whether to fetch only web archive URLs.")
 flags.DEFINE_string(
     "fetch_url_pattern", None, "URL pattern to restrict to.")
 flags.DEFINE_string(
@@ -113,19 +111,24 @@ class UrlFilterPipeline(pipeline.Pipeline):
       yield key, value
 
 
-class WebArchivePipeline(pipeline.Pipeline):
+class UrlRewritePipeline(pipeline.Pipeline):
 
   def __init__(self, reader, writer=None):
-    super(WebArchivePipeline, self).__init__(
-        UrlFilterPipeline(r".*web.archive.org.*", reader), writer)
+    super(UrlRewritePipeline, self).__init__(reader, writer)
+    self.web_archive_pattern = re2.compile(r".*web.archive.org.*")
     self.id_pattern = re2.compile(r"/\d{14}/")
     self.id_string = "id_/"
+    self.url_safe = ":/"
 
   def add_id(self, match):
     return match.string[match.start():match.end() - 1] + self.id_string
 
   def pipe(self, key, value):
-    yield re2.sub(self.id_pattern, self.add_id, key, 1), value
+    url = urllib2.quote(key, safe=self.url_safe)
+    if self.web_archive_pattern.match(url):
+      url = re2.sub(self.id_pattern, self.add_id, url, 1)
+
+    yield url, value
 
 
 class FetchingPipeline(pipeline.Pipeline):
@@ -155,14 +158,12 @@ class FetchingPipeline(pipeline.Pipeline):
 
 
 def main(argv):
-  reader = db.CsvReader(FLAGS.fetch_input, FLAGS.fetch_url_column)
+  reader = UrlRewritePipeline(
+      db.CsvReader(FLAGS.fetch_input, FLAGS.fetch_url_column))
   writer = db.ProtoDbWriter(document_pb2.Document, FLAGS.fetch_output)
 
   if FLAGS.fetch_url_pattern:
     reader = UrlFilterPipeline(FLAGS.fetch_url_pattern, reader)
-
-  if FLAGS.fetch_web_archive:
-    reader = WebArchivePipeline(reader)
  
   if FLAGS.sample_number:
     random.seed(0)
