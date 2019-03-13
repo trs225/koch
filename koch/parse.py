@@ -10,6 +10,9 @@ from __future__ import absolute_import
 import nltk
 import re2
 
+from nltk.corpus import stopwords
+from nltk.corpus import wordnet
+
 from absl import app
 from absl import flags
 
@@ -39,11 +42,23 @@ def build_blobs(html_element, doc, pos):
     add_blob(doc, html_element.tail, pos[:-1])
 
 
+def convert_pos(tag):
+  if tag.startswith("NN"):
+    return wordnet.NOUN
+  elif tag.startswith("VB"):
+    return wordnet.VERB
+  elif tag.startswith("JJ"):
+    return wordnet.ADJ
+  elif tag.startswith("RB"):
+    return wordnet.ADV
+  return wordnet.NOUN
+
+
 class ParsingPipeline(pipeline.Pipeline):
 
   def __init__(self, reader, writer=None, debug=False):
     super(ParsingPipeline, self).__init__(reader, writer)
-    self.stopwords = set(nltk.corpus.stopwords.words("english"))
+    self.stopwords = set(stopwords.words("english"))
     self.wordnet = nltk.WordNetLemmatizer()
     self.debug = debug
   
@@ -53,11 +68,12 @@ class ParsingPipeline(pipeline.Pipeline):
       build_blobs(elm, doc, [i])
 
     for blob in doc.blobs:
-      tokens = ((i, t.lower()) for i, t in enumerate(nltk.word_tokenize(blob.text)))
-      lemmatized = ((i, self.wordnet.lemmatize(t)) for i, t in tokens if t)
-      stopped = ((i, t) for i, t in lemmatized if t not in self.stopwords)
-      normalized = ((i, re2.sub(r"\W+", "", t)) for i, t in stopped)
-      for index, text in normalized:
+      pos_tokens = nltk.pos_tag(nltk.word_tokenize(blob.text))
+      lemmatized = (self.wordnet.lemmatize(t, convert_pos(p)) for t, p in pos_tokens)
+      normalized = (t.lower() for s in lemmatized for t in re2.split(r"\W+", s) if t)
+      enumerated = ((i, t) for i, t in enumerate(normalized) if not t.isdigit())
+      filtered = ((i, t) for i, t in enumerated if t not in self.stopwords)
+      for index, text in filtered:
         blob.words.add(index=index, text=text)
 
     if not self.debug:
