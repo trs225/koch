@@ -1,8 +1,7 @@
 """Fetches raw html content from urls.
 
 TODO:
- - test default utf-8 encoding
- - try getting id_ archive url
+ - multithreaded requests
  - side output for failed urls
 """
 from __future__ import absolute_import
@@ -52,7 +51,7 @@ def fetch(url):
       encoding = conn.headers.getparam("charset") or "UTF-8"
       for en in (encoding, "ISO-8859-1", "Windows-1252", "ASCII"):
         try:
-          return html.decode(en)
+          return html.decode(en).encode("utf-8")
         except Exception as e:
           continue
       else:
@@ -115,7 +114,7 @@ class UrlRewritePipeline(pipeline.Pipeline):
 
   def __init__(self, reader, writer=None):
     super(UrlRewritePipeline, self).__init__(reader, writer)
-    self.web_archive_pattern = re2.compile(r".*web.archive.org.*")
+    self.web_archive_pattern = re2.compile(r".*archive.org.*")
     self.id_pattern = re2.compile(r"/\d{14}/")
     self.id_string = "id_/"
     self.url_safe = ":/"

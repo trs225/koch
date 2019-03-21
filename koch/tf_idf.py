@@ -1,6 +1,7 @@
 """Scores document keywords using tf-idf.
 
 TODO:
+ - tests
  - look into data loss
  - take idf as side input
  - add functions to construct pipelines
@@ -64,14 +65,13 @@ class IdfPipeline(pipeline.CombiningPipeline):
     return old_keyword
 
 
-def GetTfIdfScore(term_count, doc_term_count, term_doc_count, doc_count):
-  tf = term_count / float(doc_term_count)
-  idf = math.log(doc_count / float(term_doc_count))
-
-  return tf * idf
-
-
 class TfIdfPipeline(pipeline.CombiningPipeline):
+
+  def score(self, term_count, doc_term_count, term_doc_count, doc_count):
+    tf = term_count / float(doc_term_count)
+    idf = math.log(doc_count / float(term_doc_count))
+
+    return tf * idf
   
   def pipe(self, key, value):
     doc, keyword = value
@@ -83,7 +83,7 @@ class TfIdfPipeline(pipeline.CombiningPipeline):
         term_count += 1
         
     keyword.term_count = term_count
-    keyword.tf_idf = GetTfIdfScore(
+    keyword.tf_idf = self.score(
         term_count, doc_term_count, keyword.doc_count, keyword.total_doc_count)
     doc.keywords.extend([keyword])
 
@@ -96,7 +96,7 @@ class TfIdfPipeline(pipeline.CombiningPipeline):
 
     old_doc.keywords.extend(doc.keywords)
     return old_doc
-  
+
 
 def main(argv):
   parser = db.ProtoDbReader(document_pb2.Document, FLAGS.parse_output)
