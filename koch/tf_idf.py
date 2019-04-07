@@ -23,6 +23,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string("tmp_output", None, "Output path to write parsed html to.")
 flags.DEFINE_string("tf_idf_output", None, "Output path to write tf-idf results to.")
 
+flags.DEFINE_float(
+    "min_df", 0.0, "Minimum document frequency required of keywords.")
+
 
 class TfPipeline(pipeline.Pipeline):
 
@@ -67,6 +70,10 @@ class IdfPipeline(pipeline.CombiningPipeline):
 
 class TfIdfPipeline(pipeline.CombiningPipeline):
 
+  def __init__(self, min_df, reader, rewriter):
+    super(TfIdfPipeline, self).__init__(reader, rewriter)
+    self.min_df = min_df
+
   def score(self, term_count, doc_term_count, term_doc_count, doc_count):
     tf = term_count / float(doc_term_count)
     idf = math.log(doc_count / float(term_doc_count))
@@ -87,7 +94,8 @@ class TfIdfPipeline(pipeline.CombiningPipeline):
         term_count, doc_term_count, keyword.doc_count, keyword.total_doc_count)
     doc.keywords.extend([keyword])
 
-    yield str(doc.url), doc
+    if float(keyword.doc_count) / keyword.total_doc_count > self.min_df:
+      yield str(doc.url), doc
 
   def combine(self, value, old_value):
     doc, old_doc = value, old_value
@@ -110,10 +118,11 @@ def main(argv):
       db.ProtoDbReader(document_pb2.Document, FLAGS.tf_idf_output),
       db.ProtoDbWriter(document_pb2.Document, FLAGS.tf_idf_output))
   TfIdfPipeline(
+      FLAGS.min_df,
       db.JoiningReader(
           TfPipeline(parser),
           db.ProtoDbReader(document_pb2.Keyword, FLAGS.tmp_output)),
-       tf_idf_rewriter).run()
+      tf_idf_rewriter).run()
 
 
 if __name__ == "__main__":

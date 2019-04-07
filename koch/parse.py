@@ -21,10 +21,13 @@ from koch import extract
 from koch import pipeline
 from koch.proto import document_pb2
 
+ALL_POS = set([wordnet.NOUN, wordnet.VERB, wordnet.ADJ, wordnet.ADV])
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string("parse_output", None, "Output path to write parsed html to.")
-
 flags.DEFINE_boolean("parse_debug", False, "Whether to use the debug writer.")
+
+flags.DEFINE_multi_enum("parse_pos", [], ALL_POS, "Parts of speech to retain")
 
 
 def add_blob(doc, text, pos):
@@ -56,10 +59,11 @@ def convert_pos(tag):
 
 class ParsingPipeline(pipeline.Pipeline):
 
-  def __init__(self, reader, writer=None, debug=False):
+  def __init__(self, pos, reader, writer=None, debug=False):
     super(ParsingPipeline, self).__init__(reader, writer)
     self.stopwords = set(stopwords.words("english"))
     self.wordnet = nltk.WordNetLemmatizer()
+    self.pos_tags = set(pos) or ALL_POS
     self.debug = debug
   
   def pipe(self, key, value):
@@ -68,8 +72,10 @@ class ParsingPipeline(pipeline.Pipeline):
       build_blobs(elm, doc, [i])
 
     for blob in doc.blobs:
-      pos_tokens = nltk.pos_tag(nltk.word_tokenize(blob.text))
-      lemmatized = (self.wordnet.lemmatize(t, convert_pos(p)) for t, p in pos_tokens)
+      tokenized = nltk.word_tokenize(blob.text)
+      pos_tagged = ((t, convert_pos(p)) for t, p in nltk.pos_tag(tokenized))
+      pos_filtered = ((t, p) for t, p in pos_tagged if p in self.pos_tags)
+      lemmatized = (self.wordnet.lemmatize(t, convert_pos(p)) for t, p in pos_filtered)
       normalized = (t.lower() for s in lemmatized for t in re2.split(r"\W+", s) if t)
       enumerated = ((i, t) for i, t in enumerate(normalized) if not t.isdigit())
       filtered = ((i, t) for i, t in enumerated if t not in self.stopwords)
@@ -91,7 +97,7 @@ def main(argv):
   if not FLAGS.parse_output:
     writer = db.DebugWriter()
 
-  ParsingPipeline(reader, writer, FLAGS.parse_debug).run()
+  ParsingPipeline(FLAGS.parse_pos, reader, writer, FLAGS.parse_debug).run()
  
 
 if __name__ == "__main__":
