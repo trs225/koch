@@ -64,6 +64,8 @@ message Keyword {
   int64 doc_count = 4;
 
   int64 total_doc_count = 5;
+
+  map<string, float> prior = 7;
 }
 
 message Document {
@@ -73,6 +75,8 @@ message Document {
   Timestamp timestamp = 4;
 
   map<string, string> metadata = 8;
+
+  map<string, float> classification = 9;
 
   repeated Blob blobs = 2;
 

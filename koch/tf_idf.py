@@ -20,7 +20,7 @@ from koch.proto import document_pb2
 from koch.proto import util
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("tmp_output", None, "Output path to write parsed html to.")
+flags.DEFINE_string("tmp_output", None, "Temporary output for idf calculation.")
 flags.DEFINE_string("tf_idf_output", None, "Output path to write tf-idf results to.")
 
 flags.DEFINE_float(

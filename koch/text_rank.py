@@ -107,6 +107,7 @@ class TextRankPipeline(pipeline.Pipeline):
     self.convergence_threshold = 0.0001
     self.damping_factor = 0.85
     self.max_iterations = 100
+    self.window = 10
 
   def pipe(self, key, value):
     doc = value
@@ -141,7 +142,7 @@ class TextRankPipeline(pipeline.Pipeline):
     for from_mention in from_token.mentions:
       if from_mention.blob in to_mentions:
         distance = abs(from_mention.token - to_mentions[from_mention.blob].token)
-        weight += 1.0 / distance if distance else 0
+        weight += 1.0 / distance if 0 < distance < self.window else 0
 
     return weight
 
