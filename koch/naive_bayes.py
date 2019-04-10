@@ -2,6 +2,8 @@
 
 TODO:
  - add check that doc doesn't have multiple labels
+ - weight against words that don't appear in training
+ - update main for out of sample prediction
 """
 from __future__ import absolute_import
 
@@ -112,15 +114,17 @@ class NaiveBayesPipeline(pipeline.CombiningPipeline):
     self.label_count = sum(v for k, v in class_priors.iteritems())
     self.class_priors = class_priors
 
+  def weight(self, doc, word):
+    return sum(1 for w in util.IterWords(doc) if w.text == word)
+
   def pipe(self, key, value):
     doc, keyword = value
     if not keyword.word:
       return
 
-    word_count = sum(
-        1 for w in util.IterWords(doc) if w.text == keyword.word)
     for c in keyword.prior:
-      doc.classification[c] = word_count * math.log(
+      weight = self.weight(doc, keyword.word)
+      doc.classification[c] =  weight * math.log(
         keyword.prior[c] / self.class_priors[c])
 
     yield str(doc.url), doc
@@ -133,7 +137,7 @@ class NaiveBayesPipeline(pipeline.CombiningPipeline):
       old_doc.ClearField("classification")
       for c in self.class_priors:
         old_doc.classification[c] = math.log(
-          self.class_priors[c] / self.label_count)
+          self.class_priors[c] / float(self.label_count))
 
     for c in doc.classification:
       old_doc.classification[c] += doc.classification[c]
@@ -144,19 +148,15 @@ class NaiveBayesPipeline(pipeline.CombiningPipeline):
 def main(argv):
   doc_reader = db.ProtoDbReader(document_pb2.Document, FLAGS.naive_bayes_input)
 
-  doc_labels = LabelPipeline(
-      FLAGS.naive_bayes_label, FLAGS.naive_bayes_class, doc_reader)
+  doc_labels = LabelPipeline(FLAGS.label, FLAGS.classes, doc_reader)
 
-  class_priors = GetClassPriors(
-      FLAGS.naive_bayes_label, FLAGS.naive_bayes_class, doc_labels)
+  class_priors = GetClassPriors(FLAGS.label, FLAGS.classes, doc_labels)
   logging.info("Class priors: %s", class_priors)
 
   prior_rewriter = db.Rewriter(
       db.ProtoDbReader(document_pb2.Keyword, FLAGS.tmp_output),
       db.ProtoDbWriter(document_pb2.Keyword, FLAGS.tmp_output))
-  PriorPipeline(
-      FLAGS.naive_bayes_label, FLAGS.naive_bayes_class,
-      doc_labels, prior_rewriter).run()
+  PriorPipeline(FLAGS.label, FLAGS.classes, doc_labels, prior_rewriter).run()
 
   naive_bayes_rewriter = db.Rewriter(
     db.ProtoDbReader(document_pb2.Document, FLAGS.naive_bayes_output),
@@ -173,6 +173,6 @@ if __name__ == "__main__":
   flags.mark_flag_as_required("naive_bayes_input")
   flags.mark_flag_as_required("tmp_output")
   flags.mark_flag_as_required("naive_bayes_output")
-  flags.mark_flag_as_required("naive_bayes_label")
-  flags.mark_flag_as_required("naive_bayes_class")
+  flags.mark_flag_as_required("label")
+  flags.mark_flag_as_required("classes")
   app.run(main)
