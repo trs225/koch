@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import csv
 import plyvel
 
+from absl import logging
 
 class Manager(object):
 
@@ -80,7 +81,10 @@ class DbReader(Reader):
   def __iter__(self):
     with self.manager.db.iterator() as it:
       for key, value in it:
-        yield key, self.map(value)
+        try:
+          yield key, self.map(value)
+        except:
+          logging.info("Found bad key: %s", key)
 
   def get(self, key):
     return self.map(self.manager.db.get(key))

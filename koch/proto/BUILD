@@ -22,3 +22,8 @@ py_library(
       ":document_py_proto"
     ],
 )
+
+py_proto_library(
+    name = "text_rank_py_proto",
+    protos = ["text_rank.proto"],
+)

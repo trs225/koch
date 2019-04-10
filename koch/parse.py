@@ -10,6 +10,9 @@ from __future__ import absolute_import
 import nltk
 import re2
 
+from nltk.corpus import stopwords
+from nltk.corpus import wordnet
+
 from absl import app
 from absl import flags
 
@@ -18,10 +21,13 @@ from koch import extract
 from koch import pipeline
 from koch.proto import document_pb2
 
+ALL_POS = set([wordnet.NOUN, wordnet.VERB, wordnet.ADJ, wordnet.ADV])
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string("parse_output", None, "Output path to write parsed html to.")
-
 flags.DEFINE_boolean("parse_debug", False, "Whether to use the debug writer.")
+
+flags.DEFINE_multi_enum("parse_pos", [], ALL_POS, "Parts of speech to retain")
 
 
 def add_blob(doc, text, pos):
@@ -30,52 +36,71 @@ def add_blob(doc, text, pos):
   blob.position.extend(pos)
 
 
-def build_blobs_helper(html_element, doc, pos):
+def build_blobs(html_element, doc, pos):
   if html_element.text:
     add_blob(doc, html_element.text, pos)
   for i, child in enumerate(html_element.children):
-    build_blobs_helper(child, doc, pos + [i])
+    build_blobs(child, doc, pos + [i])
   if html_element.tail:
     add_blob(doc, html_element.tail, pos[:-1])
 
 
-def build_blobs(doc):
-  for i, elm in enumerate(doc.html_elements.elements):
-    build_blobs_helper(elm, doc, [i])
-  return doc
+def convert_pos(tag):
+  if tag.startswith("NN"):
+    return wordnet.NOUN
+  elif tag.startswith("VB"):
+    return wordnet.VERB
+  elif tag.startswith("JJ"):
+    return wordnet.ADJ
+  elif tag.startswith("RB"):
+    return wordnet.ADV
+  return wordnet.NOUN
 
 
 class ParsingPipeline(pipeline.Pipeline):
 
-  def __init__(self, reader, writer=None):
+  def __init__(self, pos, reader, writer=None, debug=False):
     super(ParsingPipeline, self).__init__(reader, writer)
-    self.stopwords = set(nltk.corpus.stopwords.words("english"))
+    self.stopwords = set(stopwords.words("english"))
     self.wordnet = nltk.WordNetLemmatizer()
+    self.pos_tags = set(pos) or ALL_POS
+    self.debug = debug
   
   def pipe(self, key, value):
-    doc = build_blobs(value)
+    doc = value
+    for i, elm in enumerate(doc.content_html.elements):
+      build_blobs(elm, doc, [i])
+
     for blob in doc.blobs:
-      tokens = (t.lower() for t in nltk.word_tokenize(blob.text))
-      stopped = (t for t in tokens if t not in self.stopwords)
-      normalized = (re2.sub(r"\W+", "", t) for t in stopped)
-      lemmatized = (self.wordnet.lemmatize(t) for t in normalized if t)
-      blob.words.extend(lemmatized)
+      tokenized = nltk.word_tokenize(blob.text)
+      pos_tagged = ((t, convert_pos(p)) for t, p in nltk.pos_tag(tokenized))
+      pos_filtered = ((t, p) for t, p in pos_tagged if p in self.pos_tags)
+      lemmatized = (self.wordnet.lemmatize(t, convert_pos(p)) for t, p in pos_filtered)
+      normalized = (t.lower() for s in lemmatized for t in re2.split(r"\W+", s) if t)
+      enumerated = ((i, t) for i, t in enumerate(normalized) if not t.isdigit())
+      filtered = ((i, t) for i, t in enumerated if t not in self.stopwords)
+      for index, text in filtered:
+        blob.words.add(index=index, text=text)
+
+    if not self.debug:
+      doc.ClearField("raw_html")
+      doc.ClearField("parsed_html")
+      doc.ClearField("content_html")
 
     yield key, doc
   
 
 def main(argv):
-  reader = db.ProtoDbReader(document_pb2.Document, FLAGS.extract_input)
-  extractor = extract.ExtractionPipeline(reader)
+  reader = db.ProtoDbReader(document_pb2.Document, FLAGS.extract_output)
   writer = db.ProtoDbWriter(document_pb2.Document, FLAGS.parse_output)
 
-  if FLAGS.parse_debug:
+  if not FLAGS.parse_output:
     writer = db.DebugWriter()
 
-  ParsingPipeline(extractor, writer).run()
+  ParsingPipeline(FLAGS.parse_pos, reader, writer, FLAGS.parse_debug).run()
  
 
 if __name__ == "__main__":
-  flags.mark_flag_as_required("extract_input")
+  flags.mark_flag_as_required("extract_output")
   flags.mark_flag_as_required("parse_output")
   app.run(main)

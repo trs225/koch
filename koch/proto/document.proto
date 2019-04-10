@@ -30,18 +30,23 @@ message HtmlElement {
 
 message HtmlElements {
 
-  string url = 1;
-
   repeated HtmlElement elements = 2;
 
   float score = 3;
+}
+
+message Word {
+
+  string text = 1;
+
+  int32 index = 2;
 }
 
 message Blob {
 
   string text = 1;
 
-  repeated string words = 2;
+  repeated Word words = 4;
 
   repeated int32 position = 3;
 }
@@ -50,6 +55,8 @@ message Keyword {
 
   string word = 1;
 
+  float text_rank = 6;
+
   float tf_idf = 2;
 
   int64 term_count = 3;
@@ -57,6 +64,8 @@ message Keyword {
   int64 doc_count = 4;
 
   int64 total_doc_count = 5;
+
+  map<string, float> prior = 7;
 }
 
 message Document {
@@ -65,11 +74,17 @@ message Document {
 
   Timestamp timestamp = 4;
 
+  map<string, string> metadata = 8;
+
+  map<string, float> classification = 9;
+
   repeated Blob blobs = 2;
 
   repeated Keyword keywords = 3;
 
   RawHtml raw_html = 5;
 
-  HtmlElements html_elements = 6;
+  HtmlElement parsed_html = 7;
+
+  HtmlElements content_html = 6;
 }

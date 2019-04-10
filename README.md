@@ -9,6 +9,7 @@
 
 * [html5lib](https://html5lib.readthedocs.io/en/latest/)
 * [nltk](https://www.nltk.org/book/)
+* [pandas](https://pandas.pydata.org/pandas-docs/stable/)
 * [plyvel](https://plyvel.readthedocs.io/en/latest/)
 * [urllib2](https://docs.python.org/2/library/urllib2.html)
 * [xml.etree.ElementTree](https://docs.python.org/2/library/xml.etree.elementtree.html)

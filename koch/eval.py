@@ -28,7 +28,7 @@ flags.DEFINE_string("eval_input_val", None, "Name of the input csv val column.")
 
 def get_word_counts(string):
   out = {}
-  for word in re2.split(r'\W', string):
+  for word in re2.split(r"\W", string):
     if word in out:
       out[word] += 1
     else:
@@ -67,16 +67,13 @@ def recall(pred, label):
 class EvalPipeline(pipeline.Pipeline):
   
   def pipe(self, key, value):
-    # print 'KEY: %s' % key
-    # print 'VAL: %s' % str(value)
-
     label, doc = value
     pred = util.GetText(doc)
 
     p = precision(pred, label)
     r = recall(pred, label)
 
-    return key, "Precision: %f Recall: %f" % (p, r)
+    yield key, {"precision": p, "recall": r}
 
 
 def main(argv):
@@ -97,5 +94,6 @@ def main(argv):
 
 if __name__ == "__main__":
   flags.mark_flag_as_required("eval_input")
+  flags.mark_flag_as_required("parse_output")
   flags.mark_flag_as_required("eval_output")
   app.run(main)

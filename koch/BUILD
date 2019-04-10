@@ -72,10 +72,33 @@ py_binary(
     srcs = ["tf_idf.py"],
     deps = [
       ":db",
-      ":extract",
-      ":fetch",
       ":parse",
       ":pipeline",
+      "//koch/proto:document_py_proto",
+      "//koch/proto:util",
+    ],
+)
+
+py_binary(
+    name = "text_rank",
+    srcs = ["text_rank.py"],
+    deps = [
+      ":db",
+      ":parse",
+      ":pipeline",
+      "//koch/proto:document_py_proto",
+      "//koch/proto:text_rank_py_proto",
+      "//koch/proto:util",
+    ],
+)
+
+py_binary(
+    name = "naive_bayes",
+    srcs = ["naive_bayes.py"],
+    deps = [
+      ":db",
+      ":pipeline",
+      ":tf_idf",
       "//koch/proto:document_py_proto",
       "//koch/proto:util",
     ],
