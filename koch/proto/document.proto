@@ -66,6 +66,8 @@ message Keyword {
   int64 total_doc_count = 5;
 
   map<string, float> prior = 7;
+
+  map<string, float> mutual_info = 8;
 }
 
 message Document {

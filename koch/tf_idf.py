@@ -5,6 +5,7 @@ TODO:
  - look into data loss
  - take idf as side input
  - add functions to construct pipelines
+ - remove term_count, total_doc_count from proto
 """
 from __future__ import absolute_import
 

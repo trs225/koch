@@ -30,15 +30,15 @@ flags.DEFINE_multi_string("classes", None, "Label classifications.")
 
 
 def Normalize(string):
-    return string.strip().lower()
+  return string.strip().lower()
 
 
 def GetValues(string):
-    parts = (s for s in re2.split(r"\(.*\)", string) if s)
-    return set(
-        Normalize(s)
-        for part in parts
-        for s in part.split(','))
+  parts = (s for s in re2.split(r"\(.*\)", string) if s)
+  return set(
+      Normalize(s)
+      for part in parts
+      for s in part.split(','))
 
 
 def Label(doc, label, classes):
@@ -69,7 +69,7 @@ class PriorPipeline(pipeline.CombiningPipeline):
 
   def __init__(self, label, classes, reader, rewriter):
     super(PriorPipeline, self).__init__(reader, rewriter)
-    self.n = tf_idf.GetCorpusSize(reader)
+    self.n = tf_idf.GetCorpusSize(reader)  # UNUSED
     self.classes = classes
     self.label = label
 
@@ -99,7 +99,7 @@ class PriorPipeline(pipeline.CombiningPipeline):
 
 
 def GetClassPriors(label, classes, reader):
-  out = {c: 0 for c in classes}
+  out = {c: len(classes) for c in classes}
   with reader:
     for key, doc in reader:
       out[Label(doc, label, classes)] += 1

@@ -103,3 +103,17 @@ py_binary(
       "//koch/proto:util",
     ],
 )
+
+py_binary(
+    name = "mutual_info",
+    srcs = ["mutual_info.py"],
+    deps = [
+      ":db",
+      ":naive_bayes",
+      ":parse",
+      ":pipeline",
+      ":tf_idf",
+      "//koch/proto:document_py_proto",
+      "//koch/proto:util",
+    ],
+)
