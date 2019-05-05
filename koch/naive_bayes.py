@@ -76,7 +76,7 @@ class PriorPipeline(pipeline.CombiningPipeline):
   def pipe(self, key, value):
     doc = value
     label = Label(doc, self.label, self.classes)
-    for word in set(w.text for w in util.IterWords(doc)):
+    for word in set(k.word for k in doc.keywords):
       keyword = document_pb2.Keyword()
       keyword.word = word
       keyword.prior[label] = 1
@@ -89,6 +89,8 @@ class PriorPipeline(pipeline.CombiningPipeline):
       old_keyword = document_pb2.Keyword()
       old_keyword.CopyFrom(keyword)
       old_keyword.ClearField("prior")
+
+      # Add 1 smoothing
       for c in self.classes:
         old_keyword.prior[c] += 1
 
@@ -99,12 +101,23 @@ class PriorPipeline(pipeline.CombiningPipeline):
 
 
 def GetClassPriors(label, classes, reader):
-  out = {c: len(classes) for c in classes}
+  out = {c: len(classes) for c in classes}  # Add 1 smoothing
   with reader:
     for key, doc in reader:
       out[Label(doc, label, classes)] += 1
   
   return out
+
+
+class DocKeywordPipeline(pipeline.Pipeline):
+
+  def pipe(self, key, value):
+    doc = value
+    for word in set(k.word for k in doc.keywords):
+      new_doc = document_pb2.Document()
+      new_doc.CopyFrom(doc)
+
+      yield str(word), new_doc
 
 
 class NaiveBayesPipeline(pipeline.CombiningPipeline):
@@ -164,7 +177,7 @@ def main(argv):
   NaiveBayesPipeline(
     class_priors,
     db.JoiningReader(
-        tf_idf.TfPipeline(doc_reader),
+        DocKeywordPipeline(doc_reader),
         db.ProtoDbReader(document_pb2.Keyword, FLAGS.tmp_output)),
     naive_bayes_rewriter).run()
 

@@ -42,10 +42,10 @@ class PriorPipeline(pipeline.CombiningPipeline):
   def combine(self, value, old_value):
     keyword, old_keyword = value, old_value
     if not old_keyword.word:
-      # return keyword
-
       old_keyword = document_pb2.Keyword()
       old_keyword.word = keyword.word
+
+      # Add 1 smoothing
       old_keyword.doc_count = len(self.classes)
       for c in self.classes:
         old_keyword.prior[c] += 1
@@ -59,8 +59,8 @@ class PriorPipeline(pipeline.CombiningPipeline):
 
 class MutualInfoPipeline(pipeline.Pipeline):
 
-  def __init__(self, class_priors, reader, rewriter):
-    super(MutualInfoPipeline, self).__init__(reader, rewriter)
+  def __init__(self, class_priors, reader, writer=None):
+    super(MutualInfoPipeline, self).__init__(reader, writer)
     self.total_doc_count = sum(v for k, v in class_priors.iteritems())
     self.class_priors = class_priors
 
@@ -81,19 +81,14 @@ class MutualInfoPipeline(pipeline.Pipeline):
       n_01 = self.class_priors[c] - keyword.prior[c]
       n_00 = n - n_11 - n_10 - n_01
 
-      # LOOK MORE INTO PMI BEFORE USING
-      # keyword.mutual_info[c] += (
-      #   (math.log(n * n_11, 2) - math.log(n_1 * n__1, 2))
-      #   / (math.log(n, 2) - math.log(n_11, 2)))
-
       keyword.mutual_info[c] += n_11 * (
-         math.log(n * n_11, 2) - math.log(n_1 * n__1, 2)) / n
+          math.log(n * n_11, 2) - math.log(n_1 * n__1, 2)) / n
       keyword.mutual_info[c] += n_01 * (
           math.log(n * n_01, 2) - math.log(n_0 * n__1, 2)) / n
       keyword.mutual_info[c] += n_10 * (
-          math.log(n * n_10, 2) - math.log(n_1 * n__0, 2))/ n
+          math.log(n * n_10, 2) - math.log(n_1 * n__0, 2)) / n
       keyword.mutual_info[c] += n_00 * (
-          math.log(n * n_00, 2) - math.log(n_0 * n__0, 2))/ n
+          math.log(n * n_00, 2) - math.log(n_0 * n__0, 2)) / n
 
     yield str(keyword.word), keyword
 
