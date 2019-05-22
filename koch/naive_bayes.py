@@ -87,12 +87,7 @@ class PriorPipeline(pipeline.CombiningPipeline):
     keyword, old_keyword = value, old_value
     if not old_keyword.word:
       old_keyword = document_pb2.Keyword()
-      old_keyword.CopyFrom(keyword)
-      old_keyword.ClearField("prior")
-
-      # Add 1 smoothing
-      for c in self.classes:
-        old_keyword.prior[c] += 1
+      old_keyword.word = keyword.word
 
     for c in keyword.prior:
       old_keyword.prior[c] += keyword.prior[c]
@@ -101,10 +96,12 @@ class PriorPipeline(pipeline.CombiningPipeline):
 
 
 def GetClassPriors(label, classes, reader):
-  out = {c: len(classes) for c in classes}  # Add 1 smoothing
+  out = {c: 0 for c in classes}
   with reader:
     for key, doc in reader:
-      out[Label(doc, label, classes)] += 1
+      l = Label(doc, label, classes)
+      if l:
+        out[l] += 1
   
   return out
 
@@ -137,8 +134,8 @@ class NaiveBayesPipeline(pipeline.CombiningPipeline):
 
     for c in keyword.prior:
       weight = self.weight(doc, keyword.word)
-      doc.classification[c] =  weight * math.log(
-        keyword.prior[c] / self.class_priors[c])
+      doc.classification[c] =  weight * math.log(  # Add 1 smoothing
+        (keyword.prior[c] + 1) / (self.class_priors[c] + len(self.class_priors)))
 
     yield str(doc.url), doc
 
